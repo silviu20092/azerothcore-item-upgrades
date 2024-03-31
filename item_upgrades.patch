@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..12eb4ec44
+index 000000000..551b140ce
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,1271 @@
+@@ -0,0 +1,1275 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -778,12 +778,16 @@ index 000000000..12eb4ec44
 +    return amount;
 +}
 +
-+void ItemUpgrade::HandleItemRemove(const Player* player, const Item* item)
++void ItemUpgrade::HandleItemRemove(Player* player, Item* item)
 +{
++    player->_ApplyItemMods(item, item->GetSlot(), false);
++
 +    std::vector<CharacterUpgrade>& upgrades = characterUpgradeData[player->GetGUID().GetCounter()];
 +    std::vector<CharacterUpgrade>::const_iterator citer = std::remove_if(upgrades.begin(), upgrades.end(),
 +        [&](const CharacterUpgrade& upgrade) { return upgrade.itemGuid == item->GetGUID(); });
 +    upgrades.erase(citer, upgrades.end());
++
++    player->_ApplyItemMods(item, item->GetSlot(), true);
 +
 +    CharacterDatabase.Execute("DELETE FROM character_item_upgrade WHERE guid = {} AND item_guid = {}", player->GetGUID().GetCounter(), item->GetGUID().GetCounter());
 +}
@@ -1277,7 +1281,7 @@ index 000000000..12eb4ec44
 +}
 diff --git a/src/server/game/Entities/Item/item_upgrade.h b/src/server/game/Entities/Item/item_upgrade.h
 new file mode 100644
-index 000000000..bec5d1a28
+index 000000000..3038b02cc
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.h
 @@ -0,0 +1,216 @@
@@ -1448,7 +1452,7 @@ index 000000000..bec5d1a28
 +
 +    int32 HandleStatModifier(const Player* player, uint8 slot, uint32 statType, int32 amount) const;
 +    int32 HandleStatModifier(const Player* player, Item* item, uint32 statType, int32 amount, EnchantmentSlot slot) const;
-+    void HandleItemRemove(const Player* player, const Item* item);
++    void HandleItemRemove(Player* player, Item* item);
 +    void HandleCharacterRemove(uint32 guid);
 +public:
 +    static std::string ItemIcon(const ItemTemplate* proto, uint32 width, uint32 height, int x, int y);
