@@ -1,0 +1,30 @@
+#
+# Credits: silviu20092
+#
+
+[worldserver]
+
+########################################
+# Item upgrade module configuration
+########################################
+#
+#    ItemUpgrade.Enable
+#        Description: Enable the module or not. If the module is toggled off, items that were previously upgraded will lose their upgrade bonus.
+#                     Re-enabling the module will restore the already upgraded item bonuses.
+#        Default:     0 - Disabled
+#                     1 - Enabled
+#
+
+ItemUpgrade.Enable = 1
+
+#
+#    ItemUpgrade.AllowedStats
+#        Description: Stats that are allowed to be upgraded. These correspond to the ItemModType enum from ItemTemplate.h
+#                     For example, to allow "Attack power" to be upgraded, there is ITEM_MOD_ATTACK_POWER = 38 in the enum,
+#                     so just add it to the list of allowed stats. Values are separated by ,
+#                     Items that were upgraded with a certain stat will LOSE their upgrade bonus if you remove the stat from
+#                     allowed list. If you re-add the stat, the items will GAIN back their upgrade bonus for that stat.
+#        Default:     3,4,5,6,7,32,36,45
+#
+
+ItemUpgrade.AllowedStats = 3,4,5,6,7,32,36,45
