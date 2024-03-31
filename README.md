@@ -17,7 +17,7 @@ Adds the possibility to individually upgrade items. **EVERY** stat can be upgrad
 1. Clone this repository somewhere on your device.
 2. Copy mod-item-upgrade to your AzerothCore repo modules folder.
 3. Copy item_upgrades.patch to your AzerothCore repo (root level).
-4. Open a git command prompt in your AzerothCore repo root and use "git apply item_upgrades.patch" (no quotes). Ignore any warnings about whitespace if any. The patch should always apply with no problems on pretty much every version of AzerothCore since only two core files are modified with just a few lines of code.
+4. Open a git command prompt in your AzerothCore repo root and use "patch -p1 < item_upgrades.patch" (no quotes). Ignore any warnings about whitespace if any. The patch should always apply with no problems on pretty much every version of AzerothCore since only two core files are modified with just a few lines of code.
 5. Re-run cmake to generate the solution.
 6. Re-build your project.
 7. You should have mod_item_upgrade.conf.dist copied in configs/modules after building, copy this to your server's binaries folder.
