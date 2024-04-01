@@ -24,6 +24,13 @@ public:
 
     bool OnGossipHello(Player* player, Creature* creature) override
     {
+        if (sItemUpgrade->GetReloading())
+        {
+            ItemUpgrade::SendMessage(player, "Item Upgrade data is being reloaded by an administrator, please retry.");
+            CloseGossipMenuFor(player);
+            return false;
+        }
+
         sItemUpgrade->GetPagedData(player).reloaded = false;
 
         if (!sItemUpgrade->GetEnabled())

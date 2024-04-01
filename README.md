@@ -4,7 +4,7 @@
 
 ## Overview
 
-Adds the possibility to individually upgrade items. **EVERY** stat can be upgraded, provided you enable them in the .conf file and add them in database. Upgrades are rank-based, meaning you can incrementally upgrade each stat, starting with rank 1 to rank n. Players will need to purchase the previous rank in order to advance to the next. Stats that can be upgraded along with their ranks are in reloadable tables, meaning you can add stats and/or ranks, modify them without restarting the server, although it is recommended to restart the server if you **DELETE** ranks/stats to prevent stat mismatch for players who already bought these ranks and are **LOGGED** in. This is usually not an issue and it will always be solved after the player logs-out then logs back in.
+Adds the possibility to individually upgrade items. **EVERY** stat can be upgraded, provided you enable them in the .conf file and add them in database. Upgrades are rank-based, meaning you can incrementally upgrade each stat, starting with rank 1 to rank n. Players will need to purchase the previous rank in order to advance to the next. Stats that can be upgraded along with their ranks are in reloadable tables, meaning you can add stats and/or ranks, modify or even delete them without restarting the server. Player's upgrades will be updated accordingly after the data is reloaded.
 
 ## Limitations
 

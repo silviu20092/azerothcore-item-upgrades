@@ -35,7 +35,13 @@ private:
         for (auto& itr : pagedData)
             itr.second.reloaded = true;
 
+        sItemUpgrade->SetReloading(true);
+        sItemUpgrade->HandleDataReload(false);
+
         sItemUpgrade->LoadFromDB();
+
+        sItemUpgrade->HandleDataReload(true);
+        sItemUpgrade->SetReloading(false);
 
         handler->SendGlobalGMSysMessage("Item Upgrade module data successfully reloaded.");
         return true;

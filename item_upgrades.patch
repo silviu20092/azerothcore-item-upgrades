@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..551b140ce
+index 000000000..3a9c9853b
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,1275 @@
+@@ -0,0 +1,1354 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -77,8 +77,10 @@ index 000000000..551b140ce
 +
 +void ItemUpgrade::CleanupDB()
 +{
-+    CharacterDatabase.DirectExecute("DELETE FROM mod_item_upgrade_stats_req WHERE stat_id NOT IN (SELECT id FROM mod_item_upgrade_stats)");
-+    CharacterDatabase.DirectExecute("DELETE FROM character_item_upgrade WHERE stat_id NOT IN (SELECT id FROM mod_item_upgrade_stats)");
++    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
++    trans->Append("DELETE FROM mod_item_upgrade_stats_req WHERE stat_id NOT IN (SELECT id FROM mod_item_upgrade_stats)");
++    trans->Append("DELETE FROM character_item_upgrade WHERE stat_id NOT IN (SELECT id FROM mod_item_upgrade_stats)");
++    CharacterDatabase.DirectCommitTransaction(trans);
 +}
 +
 +void ItemUpgrade::MergeStatRequirements(std::unordered_map<uint32, StatRequirementContainer>& statRequirementMap)
@@ -396,19 +398,10 @@ index 000000000..551b140ce
 +    pagedData.upgradeStat = nullptr;
 +    pagedData.type = PAGED_DATA_TYPE_ITEMS;
 +
-+    for (uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
-+        if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
-+            AddItemToPagedData(item, player, pagedData);
-+
-+    for (uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
-+        if (Bag* bag = player->GetBagByPos(i))
-+            for (uint32 j = 0; j < bag->GetBagSize(); j++)
-+                if (Item* item = player->GetItemByPos(i, j))
-+                    AddItemToPagedData(item, player, pagedData);
-+
-+    for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; i++)
-+        if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
-+            AddItemToPagedData(item, player, pagedData);
++    std::vector<Item*> playerItems = GetPlayerItems(player, false);
++    std::vector<Item*>::iterator iter = playerItems.begin();
++    for (iter; iter != playerItems.end(); ++iter)
++        AddItemToPagedData(*iter, player, pagedData);
 +
 +    pagedData.SortAndCalculateTotals();
 +}
@@ -529,7 +522,18 @@ index 000000000..551b140ce
 +    }
 +    else if (pagedData.type == PAGED_DATA_TYPE_UPGRADED_ITEMS)
 +    {
-+        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Total upgrades: " + Acore::ToString<uint32>(pagedData.data.size()), GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page);
++        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Total items upgraded: " + Acore::ToString(pagedData.data.size()), GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page);
++
++        uint32 totalUpgrades = 0;
++        for (const Identifier* idnt : pagedData.data)
++        {
++            ItemIdentifier* itemIdnt = (ItemIdentifier*)idnt;
++            Item* item = player->GetItemByGuid(itemIdnt->guid);
++            if (item)
++                totalUpgrades += FindUpgradesForItem(player, item).size();
++        }
++
++        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Total upgrades: " + Acore::ToString(totalUpgrades), GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page);
 +    }
 +
 +    for (uint32 i = lowIndex; i <= highIndex; i++)
@@ -715,10 +719,11 @@ index 000000000..551b140ce
 +        return true;
 +    }
 +
++    if (item->IsEquipped())
++        player->_ApplyItemMods(item, item->GetSlot(), false);
 +    
 +    const UpgradeStat* foundUpgrade = FindUpgradeForItem(player, item, pagedData.upgradeStat->statType);
 +    std::vector<CharacterUpgrade>& upgrades = characterUpgradeData[player->GetGUID().GetCounter()];
-+    player->_ApplyItemMods(item, item->GetSlot(), false);
 +    if (foundUpgrade != nullptr)
 +    {
 +        std::vector<CharacterUpgrade>::const_iterator citer = std::remove_if(upgrades.begin(), upgrades.end(),
@@ -741,7 +746,9 @@ index 000000000..551b140ce
 +    newUpgrade.itemGuid = item->GetGUID();
 +    newUpgrade.upgradeStat = pagedData.upgradeStat;
 +    upgrades.push_back(newUpgrade);
-+    player->_ApplyItemMods(item, item->GetSlot(), true);
++
++    if (item->IsEquipped())
++        player->_ApplyItemMods(item, item->GetSlot(), true);
 +
 +    TakeRequirements(player, pagedData.upgradeStat);
 +
@@ -780,16 +787,19 @@ index 000000000..551b140ce
 +
 +void ItemUpgrade::HandleItemRemove(Player* player, Item* item)
 +{
-+    player->_ApplyItemMods(item, item->GetSlot(), false);
++    if (!FindUpgradesForItem(player, item).empty())
++    {
++        player->_ApplyItemMods(item, item->GetSlot(), false);
 +
-+    std::vector<CharacterUpgrade>& upgrades = characterUpgradeData[player->GetGUID().GetCounter()];
-+    std::vector<CharacterUpgrade>::const_iterator citer = std::remove_if(upgrades.begin(), upgrades.end(),
-+        [&](const CharacterUpgrade& upgrade) { return upgrade.itemGuid == item->GetGUID(); });
-+    upgrades.erase(citer, upgrades.end());
++        std::vector<CharacterUpgrade>& upgrades = characterUpgradeData[player->GetGUID().GetCounter()];
++        std::vector<CharacterUpgrade>::const_iterator citer = std::remove_if(upgrades.begin(), upgrades.end(),
++            [&](const CharacterUpgrade& upgrade) { return upgrade.itemGuid == item->GetGUID(); });
++        upgrades.erase(citer, upgrades.end());
 +
-+    player->_ApplyItemMods(item, item->GetSlot(), true);
++        player->_ApplyItemMods(item, item->GetSlot(), true);
 +
-+    CharacterDatabase.Execute("DELETE FROM character_item_upgrade WHERE guid = {} AND item_guid = {}", player->GetGUID().GetCounter(), item->GetGUID().GetCounter());
++        CharacterDatabase.Execute("DELETE FROM character_item_upgrade WHERE guid = {} AND item_guid = {}", player->GetGUID().GetCounter(), item->GetGUID().GetCounter());
++    }
 +}
 +
 +void ItemUpgrade::HandleCharacterRemove(uint32 guid)
@@ -951,6 +961,9 @@ index 000000000..551b140ce
 +            oss << " " << "[" << upgradeStat->statModPct << "% increase - ";
 +            oss << "|cffb50505" << foundStat->ItemStatValue << "|r --> ";
 +            oss << "|cff056e3a" << (int32)(CalculateModPct(foundStat->ItemStatValue, upgradeStat->statModPct)) << "|r]";
++
++            if (!IsAllowedStatType(upgradeStat->statType))
++                oss << " [|cffb50505INACTIVE]|r";
 +
 +            Identifier* identifier = new Identifier();
 +            identifier->id = 0;
@@ -1279,12 +1292,78 @@ index 000000000..551b140ce
 +
 +    return oss.str();
 +}
++
++void ItemUpgrade::SetReloading(bool value)
++{
++    reloading = value;
++}
++
++bool ItemUpgrade::GetReloading() const
++{
++    return reloading;
++}
++
++void ItemUpgrade::HandleDataReload(bool apply)
++{
++    const SessionMap& sessions = sWorld->GetAllSessions();
++    SessionMap::const_iterator itr;
++    for (itr = sessions.begin(); itr != sessions.end(); ++itr)
++        if (itr->second && itr->second->GetPlayer() && itr->second->GetPlayer()->IsInWorld())
++            HandleDataReload(itr->second->GetPlayer(), apply);
++}
++
++void ItemUpgrade::HandleDataReload(Player* player, bool apply)
++{
++    std::vector<Item*> playerItems = GetPlayerItems(player, true);
++    std::vector<Item*>::iterator iter = playerItems.begin();
++    for (iter; iter != playerItems.end(); ++iter)
++    {
++        Item* item = *iter;
++        if (!item->IsEquipped())
++            continue;
++
++        player->_ApplyItemMods(item, item->GetSlot(), apply);
++    }
++}
++
++std::vector<Item*> ItemUpgrade::GetPlayerItems(const Player* player, bool inBankAlso) const
++{
++    std::vector<Item*> items;
++    for (uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
++        if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
++            items.push_back(item);
++
++    for (uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
++        if (Bag* bag = player->GetBagByPos(i))
++            for (uint32 j = 0; j < bag->GetBagSize(); j++)
++                if (Item* item = player->GetItemByPos(i, j))
++                    items.push_back(item);
++
++    for (uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; i++)
++        if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
++            items.push_back(item);
++
++    if (inBankAlso)
++    {
++        for (uint8 i = BANK_SLOT_ITEM_START; i < BANK_SLOT_ITEM_END; i++)
++            if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
++                items.push_back(item);
++
++        for (uint8 i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
++            if (Bag* bag = player->GetBagByPos(i))
++                for (uint32 j = 0; j < bag->GetBagSize(); j++)
++                    if (Item* item = player->GetItemByPos(i, j))
++                        items.push_back(item);
++    }
++
++    return items;
++}
 diff --git a/src/server/game/Entities/Item/item_upgrade.h b/src/server/game/Entities/Item/item_upgrade.h
 new file mode 100644
-index 000000000..3038b02cc
+index 000000000..10cd315d2
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.h
-@@ -0,0 +1,216 @@
+@@ -0,0 +1,224 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -1454,6 +1533,11 @@ index 000000000..3038b02cc
 +    int32 HandleStatModifier(const Player* player, Item* item, uint32 statType, int32 amount, EnchantmentSlot slot) const;
 +    void HandleItemRemove(Player* player, Item* item);
 +    void HandleCharacterRemove(uint32 guid);
++
++    void SetReloading(bool value);
++    bool GetReloading() const;
++
++    void HandleDataReload(bool apply);
 +public:
 +    static std::string ItemIcon(const ItemTemplate* proto, uint32 width, uint32 height, int x, int y);
 +    static std::string ItemIcon(const ItemTemplate* proto);
@@ -1464,6 +1548,7 @@ index 000000000..3038b02cc
 +    static constexpr int UPGRADE_BOUGHT_SPELL_ID = 46331;
 +
 +    bool enabled;
++    bool reloading;
 +    std::vector<uint32> allowedStats;
 +    UpgradeStatContainer upgradeStatList;
 +    PagedDataMap playerPagedData;
@@ -1496,13 +1581,15 @@ index 000000000..3038b02cc
 +    void TakeRequirements(Player* player, const UpgradeStat* upgradeStat);
 +    bool PurchaseUpgrade(Player* player);
 +    void AddUpgradedItemToPagedData(const Item* item, const Player* player, PagedData& pagedData, const std::string &from);
++    void HandleDataReload(Player* player, bool apply);
++    std::vector<Item*> GetPlayerItems(const Player* player, bool inBankAlso) const;
 +};
 +
 +#define sItemUpgrade ItemUpgrade::instance()
 +
 +#endif
 diff --git a/src/server/game/Entities/Player/Player.cpp b/src/server/game/Entities/Player/Player.cpp
-index 19fff250e..e71d43b2c 100644
+index fd173a16b..4d733c988 100644
 --- a/src/server/game/Entities/Player/Player.cpp
 +++ b/src/server/game/Entities/Player/Player.cpp
 @@ -91,6 +91,8 @@
@@ -1514,7 +1601,7 @@ index 19fff250e..e71d43b2c 100644
  enum CharacterFlags
  {
      CHARACTER_FLAG_NONE                 = 0x00000000,
-@@ -6584,7 +6586,7 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
+@@ -6582,7 +6584,7 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
                  continue;
  
              statType = proto->ItemStat[i].ItemStatType;
