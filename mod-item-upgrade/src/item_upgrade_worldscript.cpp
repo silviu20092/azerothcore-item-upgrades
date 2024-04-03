@@ -11,7 +11,7 @@ class item_upgrade_worldscript : public WorldScript
 public:
     item_upgrade_worldscript() : WorldScript("item_upgrade_worldscript") {}
 
-    void OnBeforeConfigLoad(bool reload) override
+    void OnAfterConfigLoad(bool reload) override
     {
         if (reload)
         {
@@ -21,12 +21,10 @@ public:
 
             sItemUpgrade->HandleDataReload(false);
         }
-    }
 
-    void OnAfterConfigLoad(bool reload) override
-    {
         sItemUpgrade->SetEnabled(sConfigMgr->GetOption<bool>("ItemUpgrade.Enable", true));
         sItemUpgrade->LoadAllowedStats(sConfigMgr->GetOption<std::string>("ItemUpgrade.AllowedStats", ItemUpgrade::DefaultAllowedStats));
+        sItemUpgrade->SetSendItemPackets(sConfigMgr->GetOption<bool>("ItemUpgrade.SendUpgradedItemsPackets", false));
 
         if (reload)
             sItemUpgrade->HandleDataReload(true);

@@ -39,6 +39,7 @@ public:
         {
             AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, "Choose an item to upgrade", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2);
             AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, "See upgraded items", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 3);
+            AddGossipItemFor(player, GOSSIP_ICON_BATTLE, "Update visual cache", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 4);
         }
         AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Nevermind...", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
         SendGossipMenuFor(player, DEFAULT_GOSSIP_MESSAGE, creature->GetGUID());
@@ -73,6 +74,13 @@ public:
             {
                 sItemUpgrade->BuildAlreadyUpgradedItemsCatalogue(player);
                 return sItemUpgrade->AddPagedData(player, creature, 0);
+            }
+            else if (action == GOSSIP_ACTION_INFO_DEF + 4)
+            {
+                sItemUpgrade->UpdateVisualCache(player);
+                sItemUpgrade->VisualFeedback(player);
+                CloseGossipMenuFor(player);
+                return true;
             }
         }
         else if (sender == GOSSIP_SENDER_MAIN + 1)

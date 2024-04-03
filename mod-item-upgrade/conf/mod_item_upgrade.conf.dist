@@ -28,3 +28,16 @@ ItemUpgrade.Enable = 1
 #
 
 ItemUpgrade.AllowedStats = 3,4,5,6,7,32,36,45
+
+#
+#    ItemUpgrade.SendUpgradedItemsPackets
+#        Description: Whether to send SMSG_ITEM_QUERY_SINGLE_RESPONSE for upgraded items. This will ensure that owner will see the stats correctly
+#                     when reading item description. ONLY the owner will see the stats though and this DOES NOT work for items that have random
+#                     properties (stats that are random after acquiring the item, such as "of the Bear" or "of Intellect" items). The limitation
+#                     is due to WOTLK client nature and is not possible to be solved.
+#                     THIS ONLY AFFECTS VISUALS, UPGRADED STATS WILL BE THERE NONETHELESS!
+#        Default:     0 - Disabled
+#                     1 - Enabled
+#
+
+ItemUpgrade.SendUpgradedItemsPackets = 1

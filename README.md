@@ -8,9 +8,10 @@ Adds the possibility to individually upgrade items. **EVERY** stat can be upgrad
 
 ## Limitations
 
-1. Due to the nature of **WOTLK** client, the upgraded **STATS** increase will not be visible (to both the owner and other players when inspecting, or when linking the item), everyone can always see the original item stats. This can be partially resolved by sending **SMSG_ITEM_QUERY_SINGLE_RESPONSE** packet to the player, but this will show **ALL** items with the same entry as being upgraded and only the owner will see these stats anyway. So I don't bother with it.
+1. Due to the nature of **WOTLK** client, the upgraded **STATS** can only be visible to the owner.
 2. You **CAN'T** add or replace stats, you can only upgrade current item's stats.
 3. Upgrades will be lost (of course) when trading, sending mail, depositing to guild bank, deposit to auction.
+4. Heirlooms can't be upgraded.
 
 ## How to install
 
