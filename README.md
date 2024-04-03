@@ -8,7 +8,7 @@ Adds the possibility to individually upgrade items. **EVERY** stat can be upgrad
 
 ## Limitations
 
-1. Due to the nature of **WOTLK** client, the upgraded **STATS** can only be visible to the owner.
+1. Due to the nature of **WOTLK** client, the upgraded **STATS** will only be visible to the owner. Also, items with random properties (like "of the Bear", "of Intellect" etc) will always send the original stats. **This is only visual, stats will be there nonetheless!** 
 2. You **CAN'T** add or replace stats, you can only upgrade current item's stats.
 3. Upgrades will be lost (of course) when trading, sending mail, depositing to guild bank, deposit to auction.
 4. Heirlooms can't be upgraded.
