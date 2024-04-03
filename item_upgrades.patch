@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..3a9c9853b
+index 000000000..e4a9a419a
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,1354 @@
+@@ -0,0 +1,1429 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -68,11 +68,61 @@ index 000000000..3a9c9853b
 +    CleanupDB();
 +
 +    std::unordered_map<uint32, StatRequirementContainer> statRequirements;
++    LoadAllowedItems();
++    LoadBlacklistedItems();
 +    LoadStatRequirements(statRequirements);
 +    LoadUpgradeStats(statRequirements);
 +    LoadCharacterUpgradeData();
 +
 +    LOG_INFO("server.loading", " ");
++}
++
++void ItemUpgrade::LoadAllowedItems()
++{
++    allowedItems.clear();
++
++    QueryResult result = CharacterDatabase.Query("SELECT entry FROM mod_item_upgrade_allowed_items");
++    if (!result)
++        return;
++
++    do
++    {
++        Field* fields = result->Fetch();
++
++        uint32 entry = fields[0].Get<uint32>();
++        const ItemTemplate* itemTemplate = sObjectMgr->GetItemTemplate(entry);
++        if (!itemTemplate)
++        {
++            LOG_ERROR("sql.sql", "Table `mod_item_upgrade_allowed_items` has invalid item entry {}, skip", entry);
++            continue;
++        }
++
++        allowedItems[entry] = true;
++    } while (result->NextRow());
++}
++
++void ItemUpgrade::LoadBlacklistedItems()
++{
++    blacklistedItems.clear();
++
++    QueryResult result = CharacterDatabase.Query("SELECT entry FROM mod_item_upgrade_blacklisted_items");
++    if (!result)
++        return;
++
++    do
++    {
++        Field* fields = result->Fetch();
++
++        uint32 entry = fields[0].Get<uint32>();
++        const ItemTemplate* itemTemplate = sObjectMgr->GetItemTemplate(entry);
++        if (!itemTemplate)
++        {
++            LOG_ERROR("sql.sql", "Table `mod_item_upgrade_blacklisted_items` has invalid item entry {}, skip", entry);
++            continue;
++        }
++
++        blacklistedItems[entry] = true;
++    } while (result->NextRow());
 +}
 +
 +void ItemUpgrade::CleanupDB()
@@ -772,7 +822,7 @@ index 000000000..3a9c9853b
 +
 +int32 ItemUpgrade::HandleStatModifier(const Player* player, Item* item, uint32 statType, int32 amount, EnchantmentSlot slot) const
 +{
-+    if (!GetEnabled() || !IsAllowedStatType(statType))
++    if (!GetEnabled() || !IsAllowedItem(item) || IsBlacklistedItem(item) || !IsAllowedStatType(statType))
 +        return amount;
 +
 +    if (slot < MAX_INSPECTED_ENCHANTMENT_SLOT)
@@ -932,6 +982,9 @@ index 000000000..3a9c9853b
 +        itemIdentifier->name = ItemNameWithLocale(player, proto, item->GetItemRandomPropertyId());
 +        itemIdentifier->uiName = ItemLinkForUI(item, player) + " [" + from + "]";
 +
++        if (!IsAllowedItem(item) || IsBlacklistedItem(item))
++            itemIdentifier->uiName += " [|cffb50505INACTIVE|r]";
++
 +        pagedData.data.push_back(itemIdentifier);
 +    }
 +}
@@ -962,8 +1015,8 @@ index 000000000..3a9c9853b
 +            oss << "|cffb50505" << foundStat->ItemStatValue << "|r --> ";
 +            oss << "|cff056e3a" << (int32)(CalculateModPct(foundStat->ItemStatValue, upgradeStat->statModPct)) << "|r]";
 +
-+            if (!IsAllowedStatType(upgradeStat->statType))
-+                oss << " [|cffb50505INACTIVE]|r";
++            if (!IsAllowedItem(item) || IsBlacklistedItem(item) || !IsAllowedStatType(upgradeStat->statType))
++                oss << " [|cffb50505INACTIVE|r]";
 +
 +            Identifier* identifier = new Identifier();
 +            identifier->id = 0;
@@ -1045,6 +1098,12 @@ index 000000000..3a9c9853b
 +    for (const UpgradeStat& stat : upgradeStatList)
 +    {
 +        if (processed.find(stat.statType) != processed.end())
++            continue;
++
++        if (!IsAllowedItem(item))
++            continue;
++
++        if (IsBlacklistedItem(item))
 +            continue;
 +
 +        if (!IsAllowedStatType(stat.statType))
@@ -1358,12 +1417,28 @@ index 000000000..3a9c9853b
 +
 +    return items;
 +}
++
++bool ItemUpgrade::IsAllowedItem(const Item* item) const
++{
++    if (allowedItems.empty())
++        return true;
++
++    return allowedItems.find(item->GetEntry()) != allowedItems.end();
++}
++
++bool ItemUpgrade::IsBlacklistedItem(const Item* item) const
++{
++    if (blacklistedItems.empty())
++        return false;
++
++    return blacklistedItems.find(item->GetEntry()) != blacklistedItems.end();
++}
 diff --git a/src/server/game/Entities/Item/item_upgrade.h b/src/server/game/Entities/Item/item_upgrade.h
 new file mode 100644
-index 000000000..10cd315d2
+index 000000000..ca3f81895
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.h
-@@ -0,0 +1,224 @@
+@@ -0,0 +1,232 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -1495,6 +1570,8 @@ index 000000000..10cd315d2
 +        const UpgradeStat* upgradeStat;
 +    };
 +    typedef std::unordered_map<uint32, std::vector<CharacterUpgrade>> CharacterUpgradeContainer;
++
++    typedef std::unordered_map<uint32, bool> ItemEntryContainer;
 +public:
 +    static constexpr const char* DefaultAllowedStats = "0,3,4,5,6,7,32,36,45";
 +
@@ -1553,6 +1630,8 @@ index 000000000..10cd315d2
 +    UpgradeStatContainer upgradeStatList;
 +    PagedDataMap playerPagedData;
 +    CharacterUpgradeContainer characterUpgradeData;
++    ItemEntryContainer allowedItems;
++    ItemEntryContainer blacklistedItems;
 +
 +    static bool CompareIdentifierByName(const Identifier* a, const Identifier* b);
 +    static float CalculateModPct(int32 value, float pct);
@@ -1562,6 +1641,8 @@ index 000000000..10cd315d2
 +    void LoadStatRequirements(std::unordered_map<uint32, StatRequirementContainer> &statRequirementMap);
 +    void LoadUpgradeStats(const std::unordered_map<uint32, StatRequirementContainer>& statRequirementMap);
 +    void LoadCharacterUpgradeData();
++    void LoadAllowedItems();
++    void LoadBlacklistedItems();
 +    bool IsValidReqType(uint8 reqType) const;
 +    bool ValidateReq(uint32 id, UpgradeStatReqType reqType, float val1, float val2) const;
 +    void AddItemToPagedData(const Item* item, const Player* player, PagedData& pagedData);
@@ -1583,6 +1664,8 @@ index 000000000..10cd315d2
 +    void AddUpgradedItemToPagedData(const Item* item, const Player* player, PagedData& pagedData, const std::string &from);
 +    void HandleDataReload(Player* player, bool apply);
 +    std::vector<Item*> GetPlayerItems(const Player* player, bool inBankAlso) const;
++    bool IsAllowedItem(const Item* item) const;
++    bool IsBlacklistedItem(const Item* item) const;
 +};
 +
 +#define sItemUpgrade ItemUpgrade::instance()

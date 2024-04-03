@@ -52,6 +52,14 @@ So let's say you want players to upgrade stamina by 5% for **FREE**, then you do
 
 There is some sample data already inserted in these tables.
 
+### Allowing and blacklisting items
+
+You can allow or blacklist certain items by using two tables:
+* **mod_item_upgrade_allowed_items** - if you add some entries to this table, then **ONLY** these items will be available for upgrade. This is useful when you want to exclude **ALL** items and only add a few that have the possibily to be upgraded.
+* **mod_item_upgrade_blacklisted_items** - every item that is added here will no longer be available for upgrading. This is useful when you want to add upgrade possibility to **ALL** items but simply exclude a few.
+
+These two tables have only one column **entry** which corresponds to the entry of the item (**item_template.entry**). You can have the same entry in both allowed and blacklisted tables, in which case the item will become **blacklisted**. If players already bought some upgrades for a certain item and then you decide to **blacklist** that item, then the upgrade will become **inactive** (it will show as inactive in the Upgraded items menu). The upgrade will then become **active** if you decide to remove the blacklist for the item.
+
 ## Ingame usage
 
 Use .npc add 200003 to spawn the Master Item Upgrade NPC. The rest is self explanatory.
