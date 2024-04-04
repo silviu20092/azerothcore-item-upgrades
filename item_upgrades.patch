@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..38da9be35
+index 000000000..ae7194e28
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,1610 @@
+@@ -0,0 +1,1605 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -1599,15 +1599,10 @@ index 000000000..38da9be35
 +
 +void ItemUpgrade::UpdateVisualCache(Player* player)
 +{
-+    std::vector<Item*> items = GetPlayerItems(player, false);
++    std::vector<Item*> items = GetPlayerItems(player, true);
 +    std::vector<Item*>::const_iterator citer = items.begin();
 +    for (citer; citer != items.end(); ++citer)
-+    {
-+        const Item* item = *citer;
-+        if (!item->IsEquipped())
-+            continue;
-+        SendItemPacket(player, item);
-+    }
++        SendItemPacket(player, *citer);
 +}
 +
 +void ItemUpgrade::VisualFeedback(Player* player)
