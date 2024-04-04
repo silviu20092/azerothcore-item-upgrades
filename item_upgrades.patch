@@ -1,6 +1,6 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..ae7194e28
+index 000000000..432aea90d
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
 @@ -0,0 +1,1605 @@
@@ -1451,7 +1451,7 @@ index 000000000..ae7194e28
 +    return blacklistedItems.find(item->GetEntry()) != blacklistedItems.end();
 +}
 +
-+void ItemUpgrade::SendItemPacket(Player* player, const Item* item) const
++void ItemUpgrade::SendItemPacket(Player* player, Item* item) const
 +{
 +    ItemTemplate const* pProto = sObjectMgr->GetItemTemplate(item->GetEntry());
 +    std::string Name = pProto->Name1;
@@ -1502,7 +1502,7 @@ index 000000000..ae7194e28
 +    {
 +        queryData << pProto->ItemStat[i].ItemStatType;
 +        if (GetSendItemPackets())
-+            queryData << HandleStatModifier(player, item->GetSlot(), pProto->ItemStat[i].ItemStatType, pProto->ItemStat[i].ItemStatValue);
++            queryData << HandleStatModifier(player, item, pProto->ItemStat[i].ItemStatType, pProto->ItemStat[i].ItemStatValue, MAX_ENCHANTMENT_SLOT);
 +        else
 +            queryData << pProto->ItemStat[i].ItemStatValue;
 +    }
@@ -1611,7 +1611,7 @@ index 000000000..ae7194e28
 +}
 diff --git a/src/server/game/Entities/Item/item_upgrade.h b/src/server/game/Entities/Item/item_upgrade.h
 new file mode 100644
-index 000000000..4e9be7678
+index 000000000..53d8f7aa6
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.h
 @@ -0,0 +1,240 @@
@@ -1849,7 +1849,7 @@ index 000000000..4e9be7678
 +    std::vector<Item*> GetPlayerItems(const Player* player, bool inBankAlso) const;
 +    bool IsAllowedItem(const Item* item) const;
 +    bool IsBlacklistedItem(const Item* item) const;
-+    void SendItemPacket(Player* player, const Item* item) const;
++    void SendItemPacket(Player* player, Item* item) const;
 +};
 +
 +#define sItemUpgrade ItemUpgrade::instance()
