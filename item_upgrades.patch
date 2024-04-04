@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..432aea90d
+index 000000000..3d5b3928d
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,1605 @@
+@@ -0,0 +1,1655 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -568,6 +568,29 @@ index 000000000..432aea90d
 +            const UpgradeStat* currentUpgrade = FindUpgradeForItem(player, item, upgradeStat->statType);
 +            if (currentUpgrade != nullptr)
 +                oss << " [CURRENT: " << (int32)(CalculateModPct(statInfo->ItemStatValue, currentUpgrade->statModPct)) << "|r]";
++
++            std::pair<uint32, uint32> itemLevel = CalculateItemLevel(player, item, upgradeStat);
++            std::ostringstream ilvloss;
++            ilvloss << "[ITEM LEVEL ";
++            ilvloss << "|cffb50505" << itemLevel.first << "|r --> ";
++            ilvloss << "|cff056e3a" << itemLevel.second << "|r]";
++            itemLevel = CalculateItemLevel(player, item);
++            ilvloss << " [CURRENT: " << itemLevel.second << "]";
++            
++            AddGossipItemFor(player, GOSSIP_ICON_CHAT, oss.str(), GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page);
++            AddGossipItemFor(player, GOSSIP_ICON_CHAT, ilvloss.str(), GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page);
++        }
++        else if (pagedData.type == PAGED_DATA_TYPE_UPGRADED_ITEMS_STATS)
++        {
++            std::pair<uint32, uint32> itemLevel = CalculateItemLevel(player, item);
++            uint32 diff = itemLevel.second - itemLevel.first;
++            if (diff == 0)
++                return false;
++
++            std::ostringstream oss;
++            oss << "Item level increased by " << diff;
++            oss << " [|cffb50505" << itemLevel.first << "|r --> ";
++            oss << " |cff056e3a" << itemLevel.second << "|r]";
 +
 +            AddGossipItemFor(player, GOSSIP_ICON_CHAT, oss.str(), GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page);
 +        }
@@ -1485,7 +1508,10 @@ index 000000000..432aea90d
 +    queryData << pProto->InventoryType;
 +    queryData << pProto->AllowableClass;
 +    queryData << pProto->AllowableRace;
-+    queryData << pProto->ItemLevel;
++    if (GetSendItemPackets())
++        queryData << CalculateItemLevel(player, item).second;
++    else
++        queryData << pProto->ItemLevel;
 +    queryData << pProto->RequiredLevel;
 +    queryData << pProto->RequiredSkill;
 +    queryData << pProto->RequiredSkillRank;
@@ -1609,12 +1635,36 @@ index 000000000..432aea90d
 +{
 +    player->CastSpell(player, VISUAL_FEEDBACK_SPELL_ID, true);
 +}
++
++std::pair<uint32, uint32> ItemUpgrade::CalculateItemLevel(const Player* player, Item* item, const UpgradeStat* upgrade) const
++{
++    const ItemTemplate* proto = item->GetTemplate();
++    std::vector<_ItemStat> originalStats = LoadItemStatInfo(item);
++    if (originalStats.empty())
++        return std::make_pair(proto->ItemLevel, proto->ItemLevel);
++
++    uint32 originalSum = std::accumulate(originalStats.begin(), originalStats.end(), 0, [&](uint32 a, const _ItemStat& stat) { return a + stat.ItemStatValue; });
++    uint32 upgradedSum = 0;
++
++    for (const _ItemStat& stat : originalStats)
++    {
++        if (upgrade != nullptr && stat.ItemStatType == upgrade->statType)
++            upgradedSum += (uint32)CalculateModPct(stat.ItemStatValue, upgrade->statModPct);
++        else
++            upgradedSum += HandleStatModifier(player, item, stat.ItemStatType, stat.ItemStatValue, MAX_ENCHANTMENT_SLOT);
++    }
++
++    if (upgradedSum <= originalSum)
++        return std::make_pair(proto->ItemLevel, proto->ItemLevel);
++
++    return std::make_pair(proto->ItemLevel, (upgradedSum * proto->ItemLevel) / originalSum);
++}
 diff --git a/src/server/game/Entities/Item/item_upgrade.h b/src/server/game/Entities/Item/item_upgrade.h
 new file mode 100644
-index 000000000..53d8f7aa6
+index 000000000..232a4d089
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.h
-@@ -0,0 +1,240 @@
+@@ -0,0 +1,241 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -1850,6 +1900,7 @@ index 000000000..53d8f7aa6
 +    bool IsAllowedItem(const Item* item) const;
 +    bool IsBlacklistedItem(const Item* item) const;
 +    void SendItemPacket(Player* player, Item* item) const;
++    std::pair<uint32, uint32> CalculateItemLevel(const Player* player, Item* item, const UpgradeStat* upgrade = nullptr) const;
 +};
 +
 +#define sItemUpgrade ItemUpgrade::instance()

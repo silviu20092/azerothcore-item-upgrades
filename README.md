@@ -78,6 +78,7 @@ Everything is reloadable, meaning you can **add** stats and rank(s), **modify** 
 ![pic4](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic4.jpg?raw=true)
 ![pic4_1](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic4_1.jpg?raw=true)
 ![pic5](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic5.jpg?raw=true)
+![pic6](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic6.jpg?raw=true)
 
 ## Credits
 - silviu20092
