@@ -16,14 +16,15 @@ public:
 
     ChatCommandTable GetCommands() const override
     {
-        static ChatCommandTable reloadCommandTable =
+        static ChatCommandTable itemUpgradeSubcommandTable =
         {
-            { "reload", HandleReloadModItemUpgrade, SEC_ADMINISTRATOR, Console::Yes }
+            { "reload", HandleReloadModItemUpgrade, SEC_ADMINISTRATOR, Console::Yes },
+            { "lock",   HandleLockItemUpgrade,      SEC_ADMINISTRATOR, Console::Yes }
         };
 
         static ChatCommandTable itemUpgradeCommandTable =
         {
-            { "item_upgrade", reloadCommandTable }
+            { "item_upgrade", itemUpgradeSubcommandTable }
         };
 
         return itemUpgradeCommandTable;
@@ -44,6 +45,13 @@ private:
         sItemUpgrade->SetReloading(false);
 
         handler->SendGlobalGMSysMessage("Item Upgrade module data successfully reloaded.");
+        return true;
+    }
+
+    static bool HandleLockItemUpgrade(ChatHandler* handler)
+    {
+        sItemUpgrade->SetReloading(true);
+        handler->SendSysMessage("Item Upgrade NPC is now locked, it is now safe to edit database tables. Release the lock by using .item_upgrade reload command");
         return true;
     }
 };

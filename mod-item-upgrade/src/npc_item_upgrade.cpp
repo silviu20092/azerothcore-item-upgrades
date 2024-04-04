@@ -12,10 +12,10 @@
 class npc_item_upgrade : public CreatureScript
 {
 private:
-    bool CloseGossip(Player* player)
+    bool CloseGossip(Player* player, bool retValue = true)
     {
         CloseGossipMenuFor(player);
-        return true;
+        return retValue;
     }
 public:
     npc_item_upgrade() : CreatureScript("npc_item_upgrade")
@@ -27,8 +27,7 @@ public:
         if (sItemUpgrade->GetReloading())
         {
             ItemUpgrade::SendMessage(player, "Item Upgrade data is being reloaded by an administrator, please retry.");
-            CloseGossipMenuFor(player);
-            return false;
+            return CloseGossip(player);
         }
 
         sItemUpgrade->GetPagedData(player).reloaded = false;
@@ -40,6 +39,9 @@ public:
             AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, "Choose an item to upgrade", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2);
             AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, "See upgraded items", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 3);
             AddGossipItemFor(player, GOSSIP_ICON_BATTLE, "Update visual cache", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 4);
+
+            if (player->GetSession()->GetSecurity() == SEC_ADMINISTRATOR)
+                AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, "Lock for database edit", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 5, "The NPC will no longer be available to players until you release the lock with .item_upgrade reload command.", 0, false);
         }
         AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Nevermind...", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
         SendGossipMenuFor(player, DEFAULT_GOSSIP_MESSAGE, creature->GetGUID());
@@ -49,11 +51,10 @@ public:
     bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action) override
     {
         ItemUpgrade::PagedData& pagedData = sItemUpgrade->GetPagedData(player);
-        if (sItemUpgrade->GetPagedData(player).reloaded)
+        if (sItemUpgrade->GetReloading() || pagedData.reloaded)
         {
-            ItemUpgrade::SendMessage(player, "Item Upgrade data was reloaded in the meantime by an administrator, please talk again with the NPC.");
-            CloseGossipMenuFor(player);
-            return false;
+            ItemUpgrade::SendMessage(player, "Item Upgrade data is being reloaded by an administrator, please retry.");
+            return CloseGossip(player, false);
         }
 
         if (sender == GOSSIP_SENDER_MAIN)
@@ -79,8 +80,12 @@ public:
             {
                 sItemUpgrade->UpdateVisualCache(player);
                 sItemUpgrade->VisualFeedback(player);
-                CloseGossipMenuFor(player);
-                return true;
+                return CloseGossip(player);
+            }
+            else if (action == GOSSIP_ACTION_INFO_DEF + 5)
+            {
+                sItemUpgrade->SetReloading(true);
+                return CloseGossip(player);
             }
         }
         else if (sender == GOSSIP_SENDER_MAIN + 1)
@@ -104,8 +109,7 @@ public:
             if (!sItemUpgrade->IsValidItemForUpgrade(item, player))
             {
                 ItemUpgrade::SendMessage(player, "Item is no longer available for upgrade.");
-                CloseGossipMenuFor(player);
-                return false;
+                return CloseGossip(player, false);
             }
 
             sItemUpgrade->BuildStatsUpgradeCatalogue(player, item);

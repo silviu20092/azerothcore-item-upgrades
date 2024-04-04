@@ -64,7 +64,11 @@ These two tables have only one column **entry** which corresponds to the entry o
 ## Ingame usage
 
 Use .npc add 200003 to spawn the Master Item Upgrade NPC. The rest is self explanatory.
-Use **.item_upgrade reload** command to reload associated tables.
+
+### Editing related tables and hot-reloading data
+
+Everything is reloadable, meaning you can **add** stats and rank(s), **modify** current ranks, **delete** stats and ranks, add **allowed** and **blacklisted** items. The only table that you shouldn't manually modify is **character_item_upgrade**, as the data here will be validated against the main tables and orphaned records will be automatically deleted. However, modifying this table won't cause any harm, and you can actually manually delete or add character upgrades here if you want.
+**WARNING**: before starting to edit database, you should **lock** the Gossip NPC so that players can't use it in the meantime. This is **NOT** required but **strongly** advised, in this way players can't buy some upgrades while you can potentially remove them in the background, etc. Locking the NPC is done via **.item_upgrade lock** command or via the **NPC itself** if the player has administrator role (GM level 3). After you locked the NPC and finished editing the database, you can use **.item_upgrade reload** command to reload everything. This will **correctly** refresh everything related to item upgrades for every connected player (stats, visuals) and will refresh the menus for the Gossip NPC.
 
 ## Some photos
 
