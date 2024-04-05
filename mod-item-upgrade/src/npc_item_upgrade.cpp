@@ -37,6 +37,8 @@ public:
         else
         {
             AddGossipItemFor(player, GOSSIP_ICON_MONEY_BAG, "Choose an item to upgrade", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2);
+            if (sItemUpgrade->GetAllowPurgeUpgrades())
+                AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, "Purge upgrades", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 6);
             AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, "See upgraded items", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 3);
             AddGossipItemFor(player, GOSSIP_ICON_BATTLE, "Update visual cache", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 4);
 
@@ -73,7 +75,7 @@ public:
             }
             else if (action == GOSSIP_ACTION_INFO_DEF + 3)
             {
-                sItemUpgrade->BuildAlreadyUpgradedItemsCatalogue(player);
+                sItemUpgrade->BuildAlreadyUpgradedItemsCatalogue(player, ItemUpgrade::PAGED_DATA_TYPE_UPGRADED_ITEMS);
                 return sItemUpgrade->AddPagedData(player, creature, 0);
             }
             else if (action == GOSSIP_ACTION_INFO_DEF + 4)
@@ -86,6 +88,11 @@ public:
             {
                 sItemUpgrade->SetReloading(true);
                 return CloseGossip(player);
+            }
+            else if (action == GOSSIP_ACTION_INFO_DEF + 6)
+            {
+                sItemUpgrade->BuildAlreadyUpgradedItemsCatalogue(player, ItemUpgrade::PAGED_DATA_TYPE_ITEMS_FOR_PURGE);
+                return sItemUpgrade->AddPagedData(player, creature, 0);
             }
         }
         else if (sender == GOSSIP_SENDER_MAIN + 1)
@@ -117,7 +124,7 @@ public:
         }
         else if (sender == GOSSIP_SENDER_MAIN + 11)
         {
-            sItemUpgrade->BuildAlreadyUpgradedItemsCatalogue(player);
+            sItemUpgrade->BuildAlreadyUpgradedItemsCatalogue(player, ItemUpgrade::PAGED_DATA_TYPE_UPGRADED_ITEMS);
             return sItemUpgrade->AddPagedData(player, creature, 0);
         }
 

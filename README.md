@@ -70,6 +70,10 @@ Use .npc add 200003 to spawn the Master Item Upgrade NPC. The rest is self expla
 Everything is reloadable, meaning you can **add** stats and rank(s), **modify** current ranks, **delete** stats and ranks, add **allowed** and **blacklisted** items. The only table that you shouldn't manually modify is **character_item_upgrade**, as the data here will be validated against the main tables and orphaned records will be automatically deleted. However, modifying this table won't cause any harm, and you can actually manually delete or add character upgrades here if you want.
 **WARNING**: before starting to edit database, you should **lock** the Gossip NPC so that players can't use it in the meantime. This is **NOT** required but **strongly** advised, in this way players can't buy some upgrades while you can potentially remove them in the background, etc. Locking the NPC is done via **.item_upgrade lock** command or via the **NPC itself** if the player has administrator role (GM level 3). After you locked the NPC and finished editing the database, you can use **.item_upgrade reload** command to reload everything. This will **correctly** refresh everything related to item upgrades for every connected player (stats, visuals) and will refresh the menus for the Gossip NPC.
 
+### Removing upgrades from an item
+
+There is a configuration option that allows players to restore items to their original stats (remove upgrades). You can also configure a **token** (and it's quantity) to be given to the player when purging an upgrade. You **can't** purge individual stats or ranks, there is no point, you can only remove **ALL** upgrades from an item at once.
+
 ## Some photos
 
 ![pic1](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic1.jpg?raw=true)
@@ -79,6 +83,7 @@ Everything is reloadable, meaning you can **add** stats and rank(s), **modify** 
 ![pic4_1](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic4_1.jpg?raw=true)
 ![pic5](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic5.jpg?raw=true)
 ![pic6](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic6.jpg?raw=true)
+![pic7](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic7.jpg?raw=true)
 
 ## Credits
 - silviu20092

@@ -41,3 +41,32 @@ ItemUpgrade.AllowedStats = 3,4,5,6,7,32,36,45
 #
 
 ItemUpgrade.SendUpgradedItemsPackets = 1
+
+#
+#    ItemUpgrade.AllowUpgradesPurge
+#        Description: Allows the players to purge upgrades from their items.
+#        Default:     0 - Disabled
+#                     1 - Enabled
+#
+
+ItemUpgrade.AllowUpgradesPurge = 1
+
+#
+#    ItemUpgrade.UpgradePurgeToken
+#        Description: Give the player a token (item) when purging an upgrade. This is just an item entry, can be anything. Only active when
+#                     ItemUpgrade.AllowUpgradesPurge = 1
+#        Default:     0 - No token
+#                     Item Entry - the entry of token
+#
+
+ItemUpgrade.UpgradePurgeToken = 0
+
+#
+#    ItemUpgrade.UpgradePurgeTokenCount
+#        Description: How many ItemUpgrade.UpgradePurgeToken to give when players purge an upgrade. Only active when ItemUpgrade.AllowUpgradesPurge = 1
+#                     and ItemUpgrade.UpgradePurgeToken is a valid item entry
+#        Default:     0 - No effect
+#                     1+ - count
+#
+
+ItemUpgrade.UpgradePurgeTokenCount = 0

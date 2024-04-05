@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..176f05802
+index 000000000..e18a312fc
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,1653 @@
+@@ -0,0 +1,1767 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -25,6 +25,9 @@ index 000000000..176f05802
 +    enabled = true;
 +    reloading = false;
 +    sendItemPackets = false;
++    allowPurgeUpgrades = false;
++    purgeToken = 0;
++    purgeTokenCount = 0;
 +}
 +
 +ItemUpgrade::~ItemUpgrade()
@@ -608,11 +611,30 @@ index 000000000..176f05802
 +
 +        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Total upgrades: " + Acore::ToString(totalUpgrades), GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page);
 +    }
++    else if (pagedData.type == PAGED_DATA_TYPE_ITEMS_FOR_PURGE)
++    {
++        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "|cffb50505PURGE UPGRADES|r", GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page);
++        const ItemTemplate* proto = sObjectMgr->GetItemTemplate(purgeToken);
++        if (proto != nullptr)
++        {
++            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Will receive after purge:", GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page);
++
++            std::ostringstream oss;
++            oss << ItemIcon(proto);
++            oss << ItemLink(player, proto, 0);
++            oss << " " << purgeTokenCount << "x";
++            AddGossipItemFor(player, GOSSIP_ICON_VENDOR, oss.str(), GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page);
++        }
++        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Choose an upgraded item to purge:", GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page);
++    }
 +
 +    for (uint32 i = lowIndex; i <= highIndex; i++)
 +    {
 +        const Identifier* identifier = data[i];
-+        AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, identifier->uiName, GOSSIP_SENDER_MAIN + 1, GOSSIP_ACTION_INFO_DEF + identifier->id);
++        if (pagedData.type != PAGED_DATA_TYPE_ITEMS_FOR_PURGE)
++            AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, identifier->uiName, GOSSIP_SENDER_MAIN + 1, GOSSIP_ACTION_INFO_DEF + identifier->id);
++        else
++            AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, identifier->uiName, GOSSIP_SENDER_MAIN + 1, GOSSIP_ACTION_INFO_DEF + identifier->id, "Are you sure you want to remove all upgrades? This cannot be undone!", 0, false);
 +    }
 +
 +    if (pagedData.type == PAGED_DATA_TYPE_REQS)
@@ -666,6 +688,8 @@ index 000000000..176f05802
 +            AddGossipItemFor(player, GOSSIP_ICON_VENDOR, ItemLinkForUI(item, player), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF);
 +        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "|cffb50505ITEM CAN'T BE UPGRADED|r", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF);
 +    }
++    else if (pagedData.type == PAGED_DATA_TYPE_ITEMS_FOR_PURGE)
++        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "|cffb50505NOTHING TO PURGE|r", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF);
 +    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<- [First Page]", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF);
 +}
 +
@@ -771,6 +795,25 @@ index 000000000..176f05802
 +            return AddPagedData(player, creature, pagedData.currentPage);
 +        }
 +    }
++    else if (pagedData.type == PAGED_DATA_TYPE_ITEMS_FOR_PURGE)
++    {
++        const Identifier* identifier = pagedData.FindIdentifierById(action);
++        if (identifier != nullptr)
++        {
++            const ItemIdentifier* itemIdentifier = (ItemIdentifier*)identifier;
++            Item* item = player->GetItemByGuid(itemIdentifier->guid);
++            if (!IsValidItemForUpgrade(item, player))
++                SendMessage(player, "Item is no longer available.");
++            else
++            {
++                if (PurgeUpgrade(player, item))
++                    VisualFeedback(player);
++
++                BuildAlreadyUpgradedItemsCatalogue(player, ItemUpgrade::PAGED_DATA_TYPE_ITEMS_FOR_PURGE);
++                return AddPagedData(player, creature, pagedData.currentPage);
++            }
++        }
++    }
 +
 +    CloseGossipMenuFor(player);
 +    return false;
@@ -865,16 +908,19 @@ index 000000000..176f05802
 +    if (!FindUpgradesForItem(player, item).empty())
 +    {
 +        player->_ApplyItemMods(item, item->GetSlot(), false);
-+
-+        std::vector<CharacterUpgrade>& upgrades = characterUpgradeData[player->GetGUID().GetCounter()];
-+        std::vector<CharacterUpgrade>::const_iterator citer = std::remove_if(upgrades.begin(), upgrades.end(),
-+            [&](const CharacterUpgrade& upgrade) { return upgrade.itemGuid == item->GetGUID(); });
-+        upgrades.erase(citer, upgrades.end());
-+
++        RemoveItemUpgrade(player, item);
 +        player->_ApplyItemMods(item, item->GetSlot(), true);
-+
-+        CharacterDatabase.Execute("DELETE FROM character_item_upgrade WHERE guid = {} AND item_guid = {}", player->GetGUID().GetCounter(), item->GetGUID().GetCounter());
 +    }
++}
++
++void ItemUpgrade::RemoveItemUpgrade(Player* player, Item* item)
++{
++    std::vector<CharacterUpgrade>& upgrades = characterUpgradeData[player->GetGUID().GetCounter()];
++    std::vector<CharacterUpgrade>::const_iterator citer = std::remove_if(upgrades.begin(), upgrades.end(),
++        [&](const CharacterUpgrade& upgrade) { return upgrade.itemGuid == item->GetGUID(); });
++    upgrades.erase(citer, upgrades.end());
++
++    CharacterDatabase.Execute("DELETE FROM character_item_upgrade WHERE guid = {} AND item_guid = {}", player->GetGUID().GetCounter(), item->GetGUID().GetCounter());
 +}
 +
 +void ItemUpgrade::HandleCharacterRemove(uint32 guid)
@@ -959,13 +1005,13 @@ index 000000000..176f05802
 +    pagedData.SortAndCalculateTotals();
 +}
 +
-+void ItemUpgrade::BuildAlreadyUpgradedItemsCatalogue(const Player* player)
++void ItemUpgrade::BuildAlreadyUpgradedItemsCatalogue(const Player* player, PagedDataType type)
 +{
 +    PagedData& pagedData = GetPagedData(player);
 +    pagedData.Reset();
 +    pagedData.upgradeStat = nullptr;
 +    pagedData.item.guid = ObjectGuid::Empty;
-+    pagedData.type = PAGED_DATA_TYPE_UPGRADED_ITEMS;
++    pagedData.type = type;
 +
 +    for (uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
 +        if (Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
@@ -1657,12 +1703,80 @@ index 000000000..176f05802
 +
 +    return std::make_pair(proto->ItemLevel, (upgradedSum * proto->ItemLevel) / originalSum);
 +}
++
++void ItemUpgrade::LoadPurgeConfig(bool allow, int32 token, int32 count)
++{
++    allowPurgeUpgrades = allow;
++
++    if (token > 0)
++        purgeToken = (uint32)token;
++    else
++        purgeToken = 0;
++
++    if (count > 0)
++        purgeTokenCount = (uint32)count;
++    else
++        purgeTokenCount = 1;
++}
++
++bool ItemUpgrade::GetAllowPurgeUpgrades() const
++{
++    return allowPurgeUpgrades;
++}
++
++uint32 ItemUpgrade::GetPurgeToken() const
++{
++    return purgeToken;
++}
++
++uint32 ItemUpgrade::GetPurgeTokenCount() const
++{
++    return purgeTokenCount;
++}
++
++bool ItemUpgrade::PurgeUpgrade(Player* player, Item* item)
++{
++    if (!FindUpgradesForItem(player, item).empty())
++    {
++        const ItemTemplate* proto = sObjectMgr->GetItemTemplate(purgeToken);
++        if (proto != nullptr)
++        {
++            ItemPosCountVec dest;
++            InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, purgeToken, purgeTokenCount);
++            if (msg != EQUIP_ERR_OK)
++            {
++                std::ostringstream oss;
++                oss << "Trying to add " << purgeTokenCount << "x " << ItemLink(player, proto, 0);
++                oss << " failed, check your inventory space and retry.";
++                SendMessage(player, oss.str());
++                return false;
++            }
++
++            Item* tokenItem = player->StoreNewItem(dest, purgeToken, true);
++            player->SendNewItem(tokenItem, purgeTokenCount, true, false);
++        }
++
++        if (item->IsEquipped())
++            player->_ApplyItemMods(item, item->GetSlot(), false);
++
++        RemoveItemUpgrade(player, item);
++
++        if (item->IsEquipped())
++            player->_ApplyItemMods(item, item->GetSlot(), true);
++
++        SendItemPacket(player, item);
++
++        return true;
++    }
++    else
++        return false;
++}
 diff --git a/src/server/game/Entities/Item/item_upgrade.h b/src/server/game/Entities/Item/item_upgrade.h
 new file mode 100644
-index 000000000..232a4d089
+index 000000000..1a4d1d8cd
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.h
-@@ -0,0 +1,241 @@
+@@ -0,0 +1,254 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -1686,6 +1800,7 @@ index 000000000..232a4d089
 +        PAGED_DATA_TYPE_REQS,
 +        PAGED_DATA_TYPE_UPGRADED_ITEMS,
 +        PAGED_DATA_TYPE_UPGRADED_ITEMS_STATS,
++        PAGED_DATA_TYPE_ITEMS_FOR_PURGE,
 +        MAX_PAGED_DATA_TYPE
 +    };
 +
@@ -1819,7 +1934,7 @@ index 000000000..232a4d089
 +    void BuildUpgradableItemCatalogue(const Player* player);
 +    void BuildStatsUpgradeCatalogue(const Player* player, const Item* item);
 +    void BuildStatsRequirementsCatalogue(const Player* player, const UpgradeStat* upgradeStat);
-+    void BuildAlreadyUpgradedItemsCatalogue(const Player* player);
++    void BuildAlreadyUpgradedItemsCatalogue(const Player* player, PagedDataType type);
 +    void BuildItemUpgradeStatsCatalogue(const Player* player, const Item* item);
 +
 +    PagedData& GetPagedData(const Player* player);
@@ -1845,6 +1960,13 @@ index 000000000..232a4d089
 +
 +    void UpdateVisualCache(Player* player);
 +    void VisualFeedback(Player* player);
++
++    void LoadPurgeConfig(bool allow, int32 token, int32 count);
++    bool GetAllowPurgeUpgrades() const;
++    uint32 GetPurgeToken() const;
++    uint32 GetPurgeTokenCount() const;
++
++    bool PurgeUpgrade(Player* player, Item* item);
 +public:
 +    static std::string ItemIcon(const ItemTemplate* proto, uint32 width, uint32 height, int x, int y);
 +    static std::string ItemIcon(const ItemTemplate* proto);
@@ -1863,6 +1985,10 @@ index 000000000..232a4d089
 +    CharacterUpgradeContainer characterUpgradeData;
 +    ItemEntryContainer allowedItems;
 +    ItemEntryContainer blacklistedItems;
++
++    bool allowPurgeUpgrades;
++    uint32 purgeToken;
++    uint32 purgeTokenCount;
 +
 +    static bool CompareIdentifierByName(const Identifier* a, const Identifier* b);
 +    static float CalculateModPct(int32 value, float pct);
@@ -1899,13 +2025,14 @@ index 000000000..232a4d089
 +    bool IsBlacklistedItem(const Item* item) const;
 +    void SendItemPacket(Player* player, Item* item) const;
 +    std::pair<uint32, uint32> CalculateItemLevel(const Player* player, Item* item, const UpgradeStat* upgrade = nullptr) const;
++    void RemoveItemUpgrade(Player* player, Item* item);
 +};
 +
 +#define sItemUpgrade ItemUpgrade::instance()
 +
 +#endif
 diff --git a/src/server/game/Entities/Player/Player.cpp b/src/server/game/Entities/Player/Player.cpp
-index fd173a16b..4d733c988 100644
+index 10140ff94..275366749 100644
 --- a/src/server/game/Entities/Player/Player.cpp
 +++ b/src/server/game/Entities/Player/Player.cpp
 @@ -91,6 +91,8 @@
@@ -1917,7 +2044,7 @@ index fd173a16b..4d733c988 100644
  enum CharacterFlags
  {
      CHARACTER_FLAG_NONE                 = 0x00000000,
-@@ -6582,7 +6584,7 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
+@@ -6583,7 +6585,7 @@ void Player::_ApplyItemBonuses(ItemTemplate const* proto, uint8 slot, bool apply
                  continue;
  
              statType = proto->ItemStat[i].ItemStatType;
