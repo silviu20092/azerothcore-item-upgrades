@@ -1,6 +1,6 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..9d9b6bc3a
+index 000000000..7a7684cf4
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
 @@ -0,0 +1,1767 @@
@@ -638,7 +638,7 @@ index 000000000..9d9b6bc3a
 +    }
 +
 +    if (pagedData.type == PAGED_DATA_TYPE_REQS)
-+        AddGossipItemFor(player, GOSSIP_ICON_TRAINER, (MeetsRequirement(player, pagedData.upgradeStat) ? "|cff056e3a[PURCHASE]|r" : "|cffb50505[PURCHASE]|r"), GOSSIP_SENDER_MAIN + 1, GOSSIP_ACTION_INFO_DEF + 1, "Upgrades are permanent, are you sure?", 0, false);
++        AddGossipItemFor(player, GOSSIP_ICON_TRAINER, (MeetsRequirement(player, pagedData.upgradeStat) ? "|cff056e3a[PURCHASE]|r" : "|cffb50505[PURCHASE]|r"), GOSSIP_SENDER_MAIN + 1, GOSSIP_ACTION_INFO_DEF + 1, "Are you sure you want to upgrade?", 0, false);
 +
 +    if (page + 1 < pagedData.totalPages)
 +        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "[Next] ->", GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page + 1);
