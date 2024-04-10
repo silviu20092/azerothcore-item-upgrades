@@ -1,6 +1,6 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..e18a312fc
+index 000000000..9d9b6bc3a
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
 @@ -0,0 +1,1767 @@
@@ -32,7 +32,7 @@ index 000000000..e18a312fc
 +
 +ItemUpgrade::~ItemUpgrade()
 +{
-+    for (auto pageData : playerPagedData)
++    for (auto& pageData : playerPagedData)
 +        pageData.second.Reset();
 +}
 +
