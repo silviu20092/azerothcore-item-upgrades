@@ -63,7 +63,7 @@ These two tables have only one column **entry** which corresponds to the entry o
 
 ### Random upgrades on loot
 
-There are configurable options to automatically upgrade items when players loot them (Titanforging-like system). Items can only gain **RANK 1** for each stat. The chance for an automatic upgrade to occur is configurable via **ItemUpgrade.RandomUpgradeChance**. The maximum number of stats that can be upgraded is also configurable via **ItemUpgrade.RandomUpgradeMaxStatCount**. Rewarded quest items are also eligible for automatic upgrades.
+There are configurable options to automatically upgrade items when players loot them (Titanforging-like system). Maximum possible rank gained by each stat is configurable via **ItemUpgrade.RandomUpgradeMaxRank** option. The chance for an automatic upgrade to occur is configurable via **ItemUpgrade.RandomUpgradeChance**. The maximum number of stats that can be upgraded is also configurable via **ItemUpgrade.RandomUpgradeMaxStatCount**. Stats to be upgraded are chosen **randomly**. Rewarded quest items and items looted via party (need, greed rolls) are also eligible for automatic upgrades.
 
 ## Ingame usage
 

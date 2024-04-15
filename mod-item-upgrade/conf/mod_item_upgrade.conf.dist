@@ -73,8 +73,7 @@ ItemUpgrade.UpgradePurgeTokenCount = 0
 
 #
 #    ItemUpgrade.RandomUpgradesOnLoot
-#        Description: Whether looted items (including from party loot, quest items) can be automatically upgraded. Titanforging-like system. Items can only be upgraded
-#                     with max RANK 1 of each stat.
+#        Description: Whether looted items (including from party loot, quest items) can be automatically upgraded. Titanforging-like system.
 #        Default:     0 - No
 #                     1 - Yes, automatic item upgrades enabled
 #
@@ -108,3 +107,15 @@ ItemUpgrade.RandomUpgradeChance = 2
 #
 
 ItemUpgrade.RandomUpgradeMaxStatCount = 2
+
+#
+#    ItemUpgrade.RandomUpgradeMaxRank
+#        Description: Maximum upgrade rank that can be chosen. This will always be a roll between 1 and the value that you choose here. So if
+#                     you choose 3 for example, a value between 1 and 3 will be rolled. If 2 is rolled, then the stat will be upgraded to RANK 2.
+#                     If there is no RANK n, then RANK n-1 is chosen, if RANK n-1 is still not available, then the next available rank is searched
+#                     until found.
+#        Default:     3 - each stat can go up to RANK 3
+#
+
+ItemUpgrade.RandomUpgradeMaxRank = 3
+

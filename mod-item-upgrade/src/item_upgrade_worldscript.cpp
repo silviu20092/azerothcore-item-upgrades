@@ -30,6 +30,7 @@ public:
         sItemUpgrade->SetRandomUpgradesLoginMsg(sConfigMgr->GetOption<std::string>("ItemUpgrade.RandomUpgradesBroadcastLoginMsg", ""));
         sItemUpgrade->SetRandomUpgradeChance(sConfigMgr->GetOption<float>("ItemUpgrade.RandomUpgradeChance", 2.0f));
         sItemUpgrade->SetRandomUpgradeMaxStats(sConfigMgr->GetOption<int32>("ItemUpgrade.RandomUpgradeMaxStatCount", 2));
+        sItemUpgrade->SetRandomUpgradeMaxRank(sConfigMgr->GetOption<int32>("ItemUpgrade.RandomUpgradeMaxRank", 3));
 
         if (reload)
             sItemUpgrade->HandleDataReload(true);

@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..ef081adf1
+index 000000000..6ec46959a
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,1927 @@
+@@ -0,0 +1,1949 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -32,6 +32,7 @@ index 000000000..ef081adf1
 +    randomUpgradesLoginMsg = "";
 +    randomUpgradeChance = 2.0f;
 +    randomUpgradeMaxStats = 2;
++    randomUpgradeMaxRank = 3;
 +}
 +
 +ItemUpgrade::~ItemUpgrade()
@@ -1845,6 +1846,19 @@ index 000000000..ef081adf1
 +    return randomUpgradeMaxStats;
 +}
 +
++void ItemUpgrade::SetRandomUpgradeMaxRank(int32 value)
++{
++    if (value <= 0)
++        randomUpgradeMaxRank = 3;
++    else
++        randomUpgradeMaxRank = (uint32)value;
++}
++
++uint32 ItemUpgrade::GetRandomUpgradeMaxRank() const
++{
++    return randomUpgradeMaxRank;
++}
++
 +bool ItemUpgrade::ChooseRandomUpgrade(Player* player, Item* item)
 +{
 +    if (!GetEnabled())
@@ -1870,7 +1884,7 @@ index 000000000..ef081adf1
 +        if (!IsAllowedStatType(stat.ItemStatType))
 +            continue;
 +
-+        const UpgradeStat* foundUpgradeStat = FindUpgradeStat(stat.ItemStatType, 1);
++        const UpgradeStat* foundUpgradeStat = FindNearestUpgradeStat(stat.ItemStatType, (uint16)urand(1, GetRandomUpgradeMaxRank()));
 +        if (foundUpgradeStat != nullptr)
 +            upgrades.push_back(foundUpgradeStat);
 +    }
@@ -1931,12 +1945,20 @@ index 000000000..ef081adf1
 +    CharacterDatabase.Execute("INSERT INTO character_item_upgrade (guid, item_guid, stat_id) VALUES ({}, {}, {})",
 +        player->GetGUID().GetCounter(), item->GetGUID().GetCounter(), upgrade->statId);
 +}
++
++const ItemUpgrade::UpgradeStat* ItemUpgrade::FindNearestUpgradeStat(uint32 statType, uint16 rank) const
++{
++    const UpgradeStat* foundStat = nullptr;
++    while (rank > 0 && (foundStat = FindUpgradeStat(statType, rank)) == nullptr)
++        rank--;
++    return foundStat;
++}
 diff --git a/src/server/game/Entities/Item/item_upgrade.h b/src/server/game/Entities/Item/item_upgrade.h
 new file mode 100644
-index 000000000..25dbf3b6f
+index 000000000..db343a4f6
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.h
-@@ -0,0 +1,272 @@
+@@ -0,0 +1,276 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -2136,6 +2158,8 @@ index 000000000..25dbf3b6f
 +    float GetRandomUpgradeChance() const;
 +    void SetRandomUpgradeMaxStats(int32 value);
 +    uint32 GetRandomUpgradeMaxStats() const;
++    void SetRandomUpgradeMaxRank(int32 value);
++    uint32 GetRandomUpgradeMaxRank() const;
 +    bool ChooseRandomUpgrade(Player* player, Item* item);
 +public:
 +    static std::string ItemIcon(const ItemTemplate* proto, uint32 width, uint32 height, int x, int y);
@@ -2165,6 +2189,7 @@ index 000000000..25dbf3b6f
 +    std::string randomUpgradesLoginMsg;
 +    float randomUpgradeChance;
 +    uint32 randomUpgradeMaxStats;
++    uint32 randomUpgradeMaxRank;
 +
 +    static bool CompareIdentifierByName(const Identifier* a, const Identifier* b);
 +    static float CalculateModPct(int32 value, float pct);
@@ -2204,6 +2229,7 @@ index 000000000..25dbf3b6f
 +    void RemoveItemUpgrade(Player* player, Item* item);
 +    bool AddUpgradeForNewItem(Player* player, Item* item, const UpgradeStat* upgrade, const _ItemStat* stat);
 +    void AddItemUpgradeToDB(const Player* player, const Item* item, const UpgradeStat* upgrade) const;
++    const UpgradeStat* FindNearestUpgradeStat(uint32 statType, uint16 rank) const;
 +};
 +
 +#define sItemUpgrade ItemUpgrade::instance()
