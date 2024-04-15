@@ -100,8 +100,8 @@ ItemUpgrade.RandomUpgradeChance = 2
 #
 #    ItemUpgrade.RandomUpgradeMaxStatCount
 #        Description: How many stats can be automatically upgraded. This will always be a roll between 1 and the value that you choose here. So if
-#                     you choose 4 for example, a value between 1 and 4 will be rolled. If 3 is rolled, then 3 stats will be upgraded to RANK 1. The chosen
-#                     stats are also random. If an item has LESS stats than the rolled value, then ALL stats will be upgraded to RANK 1.
+#                     you choose 4 for example, a value between 1 and 4 will be rolled. If 3 is rolled, then 3 stats will be upgraded up to ItemUpgrade.RandomUpgradeMaxRank.
+#                     The chosen stats are also random. If an item has LESS stats than the rolled value, then ALL stats will be upgraded up to ItemUpgrade.RandomUpgradeMaxRank.
 #                     Choose a value between 1 and 10.
 #        Default:     2 - maximum 2 stats will be upgraded (so always 1 or 2 stats)
 #
@@ -118,4 +118,3 @@ ItemUpgrade.RandomUpgradeMaxStatCount = 2
 #
 
 ItemUpgrade.RandomUpgradeMaxRank = 3
-
