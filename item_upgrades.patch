@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..7a7684cf4
+index 000000000..ef081adf1
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,1767 @@
+@@ -0,0 +1,1927 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -28,6 +28,10 @@ index 000000000..7a7684cf4
 +    allowPurgeUpgrades = false;
 +    purgeToken = 0;
 +    purgeTokenCount = 0;
++    randomUpgrades = false;
++    randomUpgradesLoginMsg = "";
++    randomUpgradeChance = 2.0f;
++    randomUpgradeMaxStats = 2;
 +}
 +
 +ItemUpgrade::~ItemUpgrade()
@@ -398,6 +402,28 @@ index 000000000..7a7684cf4
 +    oss << itemTemplate->ItemId;
 +    oss << ":0:0:0:0:0:0:0:0:0|h[";
 +    oss << ItemNameWithLocale(player, itemTemplate, randomPropertyId);
++    oss << "]|h|r";
++
++    return oss.str();
++}
++
++/*static*/ std::string ItemUpgrade::ItemLink(const Player* player, const Item* item)
++{
++    const ItemTemplate* itemTemplate = item->GetTemplate();
++    std::stringstream oss;
++    oss << "|c";
++    oss << std::hex << ItemQualityColors[itemTemplate->Quality] << std::dec;
++    oss << "|Hitem:";
++    oss << itemTemplate->ItemId;
++    oss << ":" << item->GetEnchantmentId(PERM_ENCHANTMENT_SLOT);
++    oss << ":" << item->GetEnchantmentId(SOCK_ENCHANTMENT_SLOT);
++    oss << ":" << item->GetEnchantmentId(SOCK_ENCHANTMENT_SLOT_2);
++    oss << ":" << item->GetEnchantmentId(SOCK_ENCHANTMENT_SLOT_3);
++    oss << ":" << item->GetEnchantmentId(BONUS_ENCHANTMENT_SLOT);
++    oss << ":" << item->GetItemRandomPropertyId();
++    oss << ":" << item->GetItemSuffixFactor();
++    oss << ":" << (uint32)item->GetOwner()->GetLevel();
++    oss << "|h[" << ItemNameWithLocale(player, itemTemplate, item->GetItemRandomPropertyId());
 +    oss << "]|h|r";
 +
 +    return oss.str();
@@ -852,10 +878,7 @@ index 000000000..7a7684cf4
 +            pagedData.upgradeStat->statId, player->GetGUID().GetCounter(), item->GetGUID().GetCounter(), foundUpgrade->statId);
 +    }
 +    else
-+    {
-+        CharacterDatabase.Execute("INSERT INTO character_item_upgrade (guid, item_guid, stat_id) VALUES ({}, {}, {})",
-+            player->GetGUID().GetCounter(), item->GetGUID().GetCounter(), pagedData.upgradeStat->statId);
-+    }
++        AddItemUpgradeToDB(player, item, pagedData.upgradeStat);
 +
 +    CharacterUpgrade newUpgrade;
 +    newUpgrade.guid = player->GetGUID().GetCounter();
@@ -1552,7 +1575,7 @@ index 000000000..7a7684cf4
 +    queryData << pProto->InventoryType;
 +    queryData << pProto->AllowableClass;
 +    queryData << pProto->AllowableRace;
-+    if (GetSendItemPackets())
++    if (GetSendItemPackets() && pProto->StatsCount > 0)
 +        queryData << CalculateItemLevel(player, item).second;
 +    else
 +        queryData << pProto->ItemLevel;
@@ -1771,12 +1794,149 @@ index 000000000..7a7684cf4
 +    else
 +        return false;
 +}
++
++void ItemUpgrade::SetRandomUpgrades(bool value)
++{
++    randomUpgrades = value;
++}
++
++bool ItemUpgrade::GetRandomUpgrades() const
++{
++    return randomUpgrades;
++}
++
++void ItemUpgrade::SetRandomUpgradesLoginMsg(const std::string& value)
++{
++    randomUpgradesLoginMsg = value;
++}
++
++std::string ItemUpgrade::GetRandomUpgradesLoginMsg() const
++{
++    return randomUpgradesLoginMsg;
++}
++
++void ItemUpgrade::SetRandomUpgradeChance(float value)
++{
++    if (value <= 0.0f)
++        value = 2.0f;
++    else
++        randomUpgradeChance = value > 100.0f ? 100.0f : value;
++}
++
++float ItemUpgrade::GetRandomUpgradeChance() const
++{
++    return randomUpgradeChance;
++}
++
++void ItemUpgrade::SetRandomUpgradeMaxStats(int32 value)
++{
++    if (value <= 0)
++        randomUpgradeMaxStats = 2;
++    else
++    {
++        randomUpgradeMaxStats = (uint32)value;
++        if (randomUpgradeMaxStats > MAX_ITEM_PROTO_STATS)
++            randomUpgradeMaxStats = MAX_ITEM_PROTO_STATS;
++    }
++}
++
++uint32 ItemUpgrade::GetRandomUpgradeMaxStats() const
++{
++    return randomUpgradeMaxStats;
++}
++
++bool ItemUpgrade::ChooseRandomUpgrade(Player* player, Item* item)
++{
++    if (!GetEnabled())
++        return false;
++
++    if (!GetRandomUpgrades())
++        return false;
++
++    if (!IsAllowedItem(item) || IsBlacklistedItem(item))
++        return false;
++
++    if (!FindUpgradesForItem(player, item).empty())
++        return false;
++
++    if (!roll_chance_f(GetRandomUpgradeChance()))
++        return false;
++
++    uint32 statCountToUpgrade = urand(1, randomUpgradeMaxStats);
++    std::vector<_ItemStat> statTypes = LoadItemStatInfo(item);
++    std::vector<const UpgradeStat*> upgrades;
++    for (const _ItemStat& stat : statTypes)
++    {
++        if (!IsAllowedStatType(stat.ItemStatType))
++            continue;
++
++        const UpgradeStat* foundUpgradeStat = FindUpgradeStat(stat.ItemStatType, 1);
++        if (foundUpgradeStat != nullptr)
++            upgrades.push_back(foundUpgradeStat);
++    }
++
++    if (upgrades.empty())
++        return false;
++
++    Acore::Containers::RandomShuffle(upgrades);
++    uint32 currentStatCount = 0;
++    for (const UpgradeStat* stat : upgrades)
++    {
++        if (currentStatCount == statCountToUpgrade)
++            break;
++
++        AddUpgradeForNewItem(player, item, stat, GetStatByType(statTypes, stat->statType));
++
++        currentStatCount++;
++    }
++
++    return true;
++}
++
++bool ItemUpgrade::AddUpgradeForNewItem(Player* player, Item* item, const UpgradeStat* upgrade, const _ItemStat* stat)
++{
++    if (stat == nullptr)
++        return false;
++
++    const UpgradeStat* foundUpgrade = FindUpgradeForItem(player, item, upgrade->statType);
++    std::vector<CharacterUpgrade>& upgrades = characterUpgradeData[player->GetGUID().GetCounter()];
++    if (foundUpgrade != nullptr)
++        return false;
++    else
++        AddItemUpgradeToDB(player, item, upgrade);
++
++    CharacterUpgrade newUpgrade;
++    newUpgrade.guid = player->GetGUID().GetCounter();
++    newUpgrade.itemGuid = item->GetGUID();
++    newUpgrade.upgradeStat = upgrade;
++    upgrades.push_back(newUpgrade);
++
++    std::ostringstream oss;
++    oss << "|cffeb891a[ITEM UPGRADES SYSTEM]:|r";
++    oss << " " << ItemLink(player, item);
++    oss << " had " << StatTypeToString(upgrade->statType) << " upgraded to RANK " << upgrade->statRank << ".";
++    oss << " Increase by " << upgrade->statModPct << "% [";
++    oss << stat->ItemStatValue << " --> " << (int32)(CalculateModPct(stat->ItemStatValue, upgrade->statModPct)) << "]";
++    std::pair<uint32, uint32> itemLevel = CalculateItemLevel(player, item);
++    oss << " [New ILVL: " << itemLevel.second << "]";
++    SendMessage(player, oss.str());
++
++    SendItemPacket(player, item);
++
++    return true;
++}
++
++void ItemUpgrade::AddItemUpgradeToDB(const Player* player, const Item* item, const UpgradeStat* upgrade) const
++{
++    CharacterDatabase.Execute("INSERT INTO character_item_upgrade (guid, item_guid, stat_id) VALUES ({}, {}, {})",
++        player->GetGUID().GetCounter(), item->GetGUID().GetCounter(), upgrade->statId);
++}
 diff --git a/src/server/game/Entities/Item/item_upgrade.h b/src/server/game/Entities/Item/item_upgrade.h
 new file mode 100644
-index 000000000..1a4d1d8cd
+index 000000000..25dbf3b6f
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.h
-@@ -0,0 +1,254 @@
+@@ -0,0 +1,272 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -1967,11 +2127,22 @@ index 000000000..1a4d1d8cd
 +    uint32 GetPurgeTokenCount() const;
 +
 +    bool PurgeUpgrade(Player* player, Item* item);
++
++    void SetRandomUpgrades(bool value);
++    bool GetRandomUpgrades() const;
++    void SetRandomUpgradesLoginMsg(const std::string& value);
++    std::string GetRandomUpgradesLoginMsg() const;
++    void SetRandomUpgradeChance(float value);
++    float GetRandomUpgradeChance() const;
++    void SetRandomUpgradeMaxStats(int32 value);
++    uint32 GetRandomUpgradeMaxStats() const;
++    bool ChooseRandomUpgrade(Player* player, Item* item);
 +public:
 +    static std::string ItemIcon(const ItemTemplate* proto, uint32 width, uint32 height, int x, int y);
 +    static std::string ItemIcon(const ItemTemplate* proto);
 +    static std::string ItemNameWithLocale(const Player* player, const ItemTemplate* itemTemplate, int32 randomPropertyId);
 +    static std::string ItemLink(const Player* player, const ItemTemplate* itemTemplate, int32 randomPropertyId);
++    static std::string ItemLink(const Player* player, const Item* item);
 +    static void SendMessage(const Player* player, const std::string& message);
 +private:
 +    static constexpr int VISUAL_FEEDBACK_SPELL_ID = 46331;
@@ -1989,6 +2160,11 @@ index 000000000..1a4d1d8cd
 +    bool allowPurgeUpgrades;
 +    uint32 purgeToken;
 +    uint32 purgeTokenCount;
++
++    bool randomUpgrades;
++    std::string randomUpgradesLoginMsg;
++    float randomUpgradeChance;
++    uint32 randomUpgradeMaxStats;
 +
 +    static bool CompareIdentifierByName(const Identifier* a, const Identifier* b);
 +    static float CalculateModPct(int32 value, float pct);
@@ -2026,6 +2202,8 @@ index 000000000..1a4d1d8cd
 +    void SendItemPacket(Player* player, Item* item) const;
 +    std::pair<uint32, uint32> CalculateItemLevel(const Player* player, Item* item, const UpgradeStat* upgrade = nullptr) const;
 +    void RemoveItemUpgrade(Player* player, Item* item);
++    bool AddUpgradeForNewItem(Player* player, Item* item, const UpgradeStat* upgrade, const _ItemStat* stat);
++    void AddItemUpgradeToDB(const Player* player, const Item* item, const UpgradeStat* upgrade) const;
 +};
 +
 +#define sItemUpgrade ItemUpgrade::instance()

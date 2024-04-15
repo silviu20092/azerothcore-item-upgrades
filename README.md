@@ -61,6 +61,10 @@ You can allow or blacklist certain items by using two tables:
 
 These two tables have only one column **entry** which corresponds to the entry of the item (**item_template.entry**). You can have the same entry in both allowed and blacklisted tables, in which case the item will become **blacklisted**. If players already bought some upgrades for a certain item and then you decide to **blacklist** that item, then the upgrade will become **inactive** (it will show as inactive in the Upgraded items menu). The upgrade will then become **active** if you decide to remove the blacklist for the item.
 
+### Random upgrades on loot
+
+There are configurable options to automatically upgrade items when players loot them (Titanforging-like system). Items can only gain **RANK 1** for each stat. The chance for an automatic upgrade to occur is configurable via **ItemUpgrade.RandomUpgradeChance**. The maximum number of stats that can be upgraded is also configurable via **ItemUpgrade.RandomUpgradeMaxStatCount**. Rewarded quest items are also eligible for automatic upgrades.
+
 ## Ingame usage
 
 Use .npc add 200003 to spawn the Master Item Upgrade NPC. The rest is self explanatory.
@@ -84,6 +88,7 @@ There is a configuration option that allows players to restore items to their or
 ![pic5](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic5.jpg?raw=true)
 ![pic6](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic6.jpg?raw=true)
 ![pic7](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic7.jpg?raw=true)
+![pic8](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic8.jpg?raw=true)
 
 ## Credits
 - silviu20092

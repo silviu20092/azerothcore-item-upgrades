@@ -45,6 +45,28 @@ public:
     void OnLogin(Player* player) override
     {
         new SendUpgradePackets(player);
+
+        if (sItemUpgrade->GetEnabled() && sItemUpgrade->GetRandomUpgrades())
+        {
+            const std::string& loginMsg = sItemUpgrade->GetRandomUpgradesLoginMsg();
+            if (!loginMsg.empty())
+                ItemUpgrade::SendMessage(player, loginMsg);
+        }
+    }
+
+    void OnLootItem(Player* player, Item* item, uint32 /*count*/, ObjectGuid /*lootguid*/) override
+    {
+        sItemUpgrade->ChooseRandomUpgrade(player, item);
+    }
+
+    void OnGroupRollRewardItem(Player* player, Item* item, uint32 /*count*/, RollVote /*voteType*/, Roll* /*roll*/) override
+    {
+        sItemUpgrade->ChooseRandomUpgrade(player, item);
+    }
+
+    void OnQuestRewardItem(Player* player, Item* item, uint32 /*count*/) override
+    {
+        sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
 };
 

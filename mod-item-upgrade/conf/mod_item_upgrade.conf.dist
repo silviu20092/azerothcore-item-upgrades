@@ -70,3 +70,41 @@ ItemUpgrade.UpgradePurgeToken = 0
 #
 
 ItemUpgrade.UpgradePurgeTokenCount = 0
+
+#
+#    ItemUpgrade.RandomUpgradesOnLoot
+#        Description: Whether looted items (including from party loot, quest items) can be automatically upgraded. Titanforging-like system. Items can only be upgraded
+#                     with max RANK 1 of each stat.
+#        Default:     0 - No
+#                     1 - Yes, automatic item upgrades enabled
+#
+
+ItemUpgrade.RandomUpgradesOnLoot = 0
+
+#
+#    ItemUpgrade.RandomUpgradesBroadcastLoginMsg
+#        Description: Let players know that random item upgrades are ON via a message that will be sent when player logs in.
+#                     Only has effect when ItemUpgrade.RandomUpgradesOnLoot = 1. Just set to "" (double quotes) if you don't want to broadcast anything.
+#        Default:     |cffeb891a[ITEM UPGRADES SYSTEM]:|r Random item upgrades are active. You have a chance to gain stat upgrades on loot for eligible items.
+#
+
+ItemUpgrade.RandomUpgradesBroadcastLoginMsg = |cffeb891a[ITEM UPGRADES SYSTEM]:|r Random item upgrades are active. You have a chance to gain stat upgrades on loot for eligible items.
+
+#
+#    ItemUpgrade.RandomUpgradeChance
+#        Description: Automatic upgrade chance, only has effect when ItemUpgrade.RandomUpgradesOnLoot = 1. Must be > 0.
+#        Default:     2 - 2% chance for items to be automatically upgraded when looted
+#
+
+ItemUpgrade.RandomUpgradeChance = 2
+
+#
+#    ItemUpgrade.RandomUpgradeMaxStatCount
+#        Description: How many stats can be automatically upgraded. This will always be a roll between 1 and the value that you choose here. So if
+#                     you choose 4 for example, a value between 1 and 4 will be rolled. If 3 is rolled, then 3 stats will be upgraded to RANK 1. The chosen
+#                     stats are also random. If an item has LESS stats than the rolled value, then ALL stats will be upgraded to RANK 1.
+#                     Choose a value between 1 and 10.
+#        Default:     2 - maximum 2 stats will be upgraded (so always 1 or 2 stats)
+#
+
+ItemUpgrade.RandomUpgradeMaxStatCount = 2
