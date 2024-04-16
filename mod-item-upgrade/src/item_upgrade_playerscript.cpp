@@ -68,6 +68,11 @@ public:
     {
         sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
+
+    void OnCreateItem(Player* player, Item* item, uint32 /*count*/) override
+    {
+        sItemUpgrade->ChooseRandomUpgrade(player, item);
+    }
 };
 
 void AddSC_item_upgrade_playerscript()
