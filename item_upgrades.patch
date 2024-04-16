@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..6ec46959a
+index 000000000..8c2d02bd4
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,1949 @@
+@@ -0,0 +1,1950 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -593,11 +593,11 @@ index 000000000..6ec46959a
 +            oss << "UPGRADE " << StatTypeToString(upgradeStat->statType) << " [RANK " << upgradeStat->statRank << "]";
 +            oss << " " << "[" << upgradeStat->statModPct << "% increase - ";
 +            oss << "|cffb50505" << statInfo->ItemStatValue << "|r --> ";
-+            oss << "|cff056e3a" << (int32)(CalculateModPct(statInfo->ItemStatValue, upgradeStat->statModPct)) << "|r]";
++            oss << "|cff056e3a" << CalculateModPct(statInfo->ItemStatValue, upgradeStat) << "|r]";
 +
 +            const UpgradeStat* currentUpgrade = FindUpgradeForItem(player, item, upgradeStat->statType);
 +            if (currentUpgrade != nullptr)
-+                oss << " [CURRENT: " << (int32)(CalculateModPct(statInfo->ItemStatValue, currentUpgrade->statModPct)) << "|r]";
++                oss << " [CURRENT: " << CalculateModPct(statInfo->ItemStatValue, currentUpgrade) << "|r]";
 +
 +            std::pair<uint32, uint32> itemLevel = CalculateItemLevel(player, item, upgradeStat);
 +            std::ostringstream ilvloss;
@@ -922,7 +922,7 @@ index 000000000..6ec46959a
 +
 +    const UpgradeStat* foundUpgrade = FindUpgradeForItem(player, item, statType);
 +    if (foundUpgrade != nullptr)
-+        return (int32)CalculateModPct(amount, foundUpgrade->statModPct);
++        return CalculateModPct(amount, foundUpgrade);
 +
 +    return amount;
 +}
@@ -1108,7 +1108,7 @@ index 000000000..6ec46959a
 +            oss << "UPGRADED " << statTypeStr << " [RANK " << upgradeStat->statRank << "]";
 +            oss << " " << "[" << upgradeStat->statModPct << "% increase - ";
 +            oss << "|cffb50505" << foundStat->ItemStatValue << "|r --> ";
-+            oss << "|cff056e3a" << (int32)(CalculateModPct(foundStat->ItemStatValue, upgradeStat->statModPct)) << "|r]";
++            oss << "|cff056e3a" << CalculateModPct(foundStat->ItemStatValue, upgradeStat) << "|r]";
 +
 +            if (!IsAllowedItem(item) || IsBlacklistedItem(item) || !IsAllowedStatType(upgradeStat->statType))
 +                oss << " [|cffb50505INACTIVE|r]";
@@ -1211,13 +1211,13 @@ index 000000000..6ec46959a
 +        processed[stat.statType] = true;
 +
 +        const UpgradeStat* foundUpgrade = FindUpgradeForItem(player, item, stat.statType);
-+        float currentModPct = 0.0f;
++        const UpgradeStat* currentUpgrade = nullptr;
 +        Identifier* identifier = new Identifier();
 +        std::ostringstream oss;
 +        oss << "UPGRADE " << StatTypeToString(statInfo->ItemStatType) << " ";
 +        if (foundUpgrade != nullptr)
 +        {
-+            currentModPct = foundUpgrade->statModPct;
++            currentUpgrade = foundUpgrade;
 +
 +            const UpgradeStat* nextUpgrade = FindUpgradeStat(stat.statType, foundUpgrade->statRank + 1);
 +            if (nextUpgrade == nullptr)
@@ -1244,9 +1244,9 @@ index 000000000..6ec46959a
 +
 +        oss << " " << "[" << foundUpgrade->statModPct << "% increase - ";
 +        oss << "|cffb50505" << statInfo->ItemStatValue << "|r --> ";
-+        oss << "|cff056e3a" << (int32)(CalculateModPct(statInfo->ItemStatValue, foundUpgrade->statModPct)) << "|r]";
-+        if (currentModPct > 0.0f)
-+            oss << " [CURRENT: " << (int32)(CalculateModPct(statInfo->ItemStatValue, currentModPct)) << "]";
++        oss << "|cff056e3a" << CalculateModPct(statInfo->ItemStatValue, foundUpgrade) << "|r]";
++        if (currentUpgrade != nullptr)
++            oss << " [CURRENT: " << CalculateModPct(statInfo->ItemStatValue, currentUpgrade) << "]";
 +        
 +        identifier->uiName = oss.str();
 +        identifier->name = StatTypeToString(stat.statType);
@@ -1256,9 +1256,10 @@ index 000000000..6ec46959a
 +    pagedData.SortAndCalculateTotals();
 +}
 +
-+/*static*/ float ItemUpgrade::CalculateModPct(int32 value, float pct)
++/*static*/ int32 ItemUpgrade::CalculateModPct(int32 value, const UpgradeStat* upgradeStat)
 +{
-+    return value * (1 + pct / 100.0f);
++    int32 newAmount = (int32)(value * (1 + upgradeStat->statModPct / 100.0f));
++    return std::max(newAmount, value + upgradeStat->statRank);
 +}
 +
 +/*static*/ bool ItemUpgrade::CompareIdentifierByName(const Identifier* a, const Identifier* b)
@@ -1717,7 +1718,7 @@ index 000000000..6ec46959a
 +    for (const _ItemStat& stat : originalStats)
 +    {
 +        if (upgrade != nullptr && stat.ItemStatType == upgrade->statType)
-+            upgradedSum += (uint32)CalculateModPct(stat.ItemStatValue, upgrade->statModPct);
++            upgradedSum += (uint32)CalculateModPct(stat.ItemStatValue, upgrade);
 +        else
 +            upgradedSum += HandleStatModifier(player, item, stat.ItemStatType, stat.ItemStatValue, MAX_ENCHANTMENT_SLOT);
 +    }
@@ -1930,7 +1931,7 @@ index 000000000..6ec46959a
 +    oss << " " << ItemLink(player, item);
 +    oss << " had " << StatTypeToString(upgrade->statType) << " upgraded to RANK " << upgrade->statRank << ".";
 +    oss << " Increase by " << upgrade->statModPct << "% [";
-+    oss << stat->ItemStatValue << " --> " << (int32)(CalculateModPct(stat->ItemStatValue, upgrade->statModPct)) << "]";
++    oss << stat->ItemStatValue << " --> " << CalculateModPct(stat->ItemStatValue, upgrade) << "]";
 +    std::pair<uint32, uint32> itemLevel = CalculateItemLevel(player, item);
 +    oss << " [New ILVL: " << itemLevel.second << "]";
 +    SendMessage(player, oss.str());
@@ -1955,7 +1956,7 @@ index 000000000..6ec46959a
 +}
 diff --git a/src/server/game/Entities/Item/item_upgrade.h b/src/server/game/Entities/Item/item_upgrade.h
 new file mode 100644
-index 000000000..db343a4f6
+index 000000000..d8183175b
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.h
 @@ -0,0 +1,276 @@
@@ -2192,7 +2193,7 @@ index 000000000..db343a4f6
 +    uint32 randomUpgradeMaxRank;
 +
 +    static bool CompareIdentifierByName(const Identifier* a, const Identifier* b);
-+    static float CalculateModPct(int32 value, float pct);
++    static int32 CalculateModPct(int32 value, const UpgradeStat* upgradeStat);
 +    static std::string CopperToMoneyStr(uint32 money, bool colored);
 +
 +    void CleanupDB();
