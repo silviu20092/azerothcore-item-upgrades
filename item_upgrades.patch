@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..3874f51d2
+index 000000000..25ce0ed21
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,2045 @@
+@@ -0,0 +1,2047 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -1268,6 +1268,7 @@ index 000000000..3874f51d2
 +
 +            const UpgradeStat* foundUpgrade = FindUpgradeForItem(player, item, stat.statType);
 +            const UpgradeStat* currentUpgrade = nullptr;
++            bool atMaxRank = false;
 +            Identifier* identifier = new Identifier();
 +            std::ostringstream oss;
 +            oss << "UPGRADE " << StatTypeToString(statInfo->ItemStatType) << " ";
@@ -1280,6 +1281,7 @@ index 000000000..3874f51d2
 +                {
 +                    oss << "[RANK " << foundUpgrade->statRank << " |cffb50505MAX|r]";
 +                    identifier->id = foundUpgrade->statId;
++                    atMaxRank = true;
 +                }
 +                else
 +                {
@@ -1310,8 +1312,8 @@ index 000000000..3874f51d2
 +                    oss << "]";
 +            }
 +
-+            if (!CanApplyUpgradeForItem(item, foundUpgrade))
-+                oss << " [|cffb50505LOCKED FOR ITEM|r]";
++            if (!atMaxRank && !CanApplyUpgradeForItem(item, foundUpgrade))
++                oss << " [|cffb50505UPGRADE FORBIDDEN|r]";
 +
 +            identifier->uiName = oss.str();
 +            identifier->name = StatTypeToString(stat.statType);
