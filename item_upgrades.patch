@@ -2001,10 +2001,10 @@ index 000000000..ad46a1cc9
 +}
 diff --git a/src/server/game/Entities/Item/item_upgrade.h b/src/server/game/Entities/Item/item_upgrade.h
 new file mode 100644
-index 000000000..b6e8bdeb8
+index 000000000..eea232a03
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.h
-@@ -0,0 +1,286 @@
+@@ -0,0 +1,288 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -2088,6 +2088,7 @@ index 000000000..b6e8bdeb8
 +                2 = this rank requires honor points to be bought
 +                3 = this rank requires arena points to be bought
 +                4 = this rank requires certain item(s) to be bought
++                5 = this rank requires to-be-upgraded item's entry to match a certain value
 +         */
 +        UpgradeStatReqType reqType;
 +
@@ -2096,6 +2097,7 @@ index 000000000..b6e8bdeb8
 +         *   If reqType = 2 THEN required honor points to purchase rank
 +         *   If reqType = 3 THEN required arena points to purchase rank
 +         *   If reqType = 4 THEN item ENTRY (from item_template.entry) required to purchase rank
++         *   If reqType = 5 THEN item ENTRY (from item_template.entry) which must match to-be-upgraded item's entry
 +         */
 +        float reqVal1;
 +
