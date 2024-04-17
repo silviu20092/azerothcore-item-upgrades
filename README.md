@@ -40,13 +40,11 @@ Let's say you inserted the two lines and their **id** is 10 (for rank 1) and 11 
   * 2 - requires **honor points**
   * 3 - requires **arena points**
   * 4 - requires **item(s)**
-  * 5 - requires **item entry**
 * **req_val1** - based on **req_type**:
   * when req_type = 1 (money), then this is a numeric value corresponding to the amount of required **copper** (e.g 10000000 means the rank will require 1000 gold to be bought)
   * when req_type = 2 (honor), then this is a numeric value corresponding to how many honor points are required to buy the rank
   * when req_type = 3 (arena), then this is a numeric value corresponding to how many arena points are required to buy the rank
   * when req_type = 4 (item), then this is the **entry** (see **item_template.entry**) of the required item(s) to buy the rank
-  * when req_type = 5 (item entry), then the item's entry (**item_template.entry**) to be upgraded must be equal to this. You can of course have multiple lines with req_type = 5 for the same **stat_id**, which means this rank will only be available to these specific entries. This is useful when you want a rank to be available **ONLY** for some specific items.
 * **req_val2** - based on **req_type**:
   * **UNUSED** when req_type is not 4
   * when req_type = 4 (item), then this is the amount of **req_val1** item(s) required to buy the rank
@@ -62,6 +60,12 @@ You can allow or blacklist certain items by using two tables:
 * **mod_item_upgrade_blacklisted_items** - every item that is added here will no longer be available for upgrading. This is useful when you want to add upgrade possibility to **ALL** items but simply exclude a few.
 
 These two tables have only one column **entry** which corresponds to the entry of the item (**item_template.entry**). You can have the same entry in both allowed and blacklisted tables, in which case the item will become **blacklisted**. If players already bought some upgrades for a certain item and then you decide to **blacklist** that item, then the upgrade will become **inactive** (it will show as inactive in the Upgraded items menu). The upgrade will then become **active** if you decide to remove the blacklist for the item.
+
+### Allowing and blacklisting **ranks** for items
+
+There is the possibility to allow or blacklist **ranks** for certain items. Just like above, two tables are involved:
+* **mod_item_upgrade_allowed_stats_items** - link a certain rank (**stat_id**, this points to **mod_item_upgrade_stats.id**) with as many items as you want. If there are records for a certain **stat_id**, this means that **ONLY** these items will be able to gain/use this rank.
+* **mod_item_upgrade_blacklisted_stats_items** - If there are records for a certain **stat_id**, this means that these items will no longer be able to gain/use this rank.
 
 ### Random upgrades on loot
 
