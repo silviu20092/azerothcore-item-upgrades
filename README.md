@@ -40,11 +40,13 @@ Let's say you inserted the two lines and their **id** is 10 (for rank 1) and 11 
   * 2 - requires **honor points**
   * 3 - requires **arena points**
   * 4 - requires **item(s)**
+  * 5 - requires **item entry**
 * **req_val1** - based on **req_type**:
   * when req_type = 1 (money), then this is a numeric value corresponding to the amount of required **copper** (e.g 10000000 means the rank will require 1000 gold to be bought)
   * when req_type = 2 (honor), then this is a numeric value corresponding to how many honor points are required to buy the rank
   * when req_type = 3 (arena), then this is a numeric value corresponding to how many arena points are required to buy the rank
   * when req_type = 4 (item), then this is the **entry** (see **item_template.entry**) of the required item(s) to buy the rank
+  * when req_type = 5 (item entry), then the item's entry (**item_template.entry**) to be upgraded must be equal to this. You can of course have multiple lines with req_type = 5 for the same **stat_id**, which means this rank will only be available to these specific entries. This is useful when you want a rank to be available **ONLY** for some specific items.
 * **req_val2** - based on **req_type**:
   * **UNUSED** when req_type is not 4
   * when req_type = 4 (item), then this is the amount of **req_val1** item(s) required to buy the rank

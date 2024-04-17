@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..8c2d02bd4
+index 000000000..ad46a1cc9
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,1950 @@
+@@ -0,0 +1,1995 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -196,6 +196,22 @@ index 000000000..8c2d02bd4
 +                newStatReq.push_back(UpgradeStatReq(statPair.first, REQ_TYPE_ITEM, itemPair.first, itemPair.second));
 +        }
 +
++        itemCountMap.clear();
++        StatRequirementContainer mergedReqs;
++        for (const UpgradeStatReq& req : statPair.second)
++        {
++            if (req.reqType != REQ_TYPE_ALLOWED_ENTRY)
++                continue;
++
++            if (itemCountMap.find((uint32)req.reqVal1) != itemCountMap.end())
++                continue;
++
++            mergedReqs.push_back(UpgradeStatReq(statPair.first, REQ_TYPE_ALLOWED_ENTRY, req.reqVal1));
++            itemCountMap[(uint32)req.reqVal1] = 1;
++        }
++        if (!mergedReqs.empty())
++            newStatReq.push_back(UpgradeStatReq(statPair.first, REQ_TYPE_ALLOWED_ENTRY, mergedReqs));
++
 +        statPair.second = newStatReq;
 +    }
 +}
@@ -326,6 +342,7 @@ index 000000000..8c2d02bd4
 +            LOG_ERROR("sql.sql", "Table `mod_item_upgrade_stats_req` has invalid `req_val1` {} (arena points) for `id` {}, skip", val1, id);
 +            return false;
 +        case ItemUpgrade::REQ_TYPE_ITEM:
++        {
 +            const ItemTemplate* itemTemplate = sObjectMgr->GetItemTemplate(val1Int);
 +            if (!itemTemplate)
 +            {
@@ -337,6 +354,17 @@ index 000000000..8c2d02bd4
 +                return true;
 +            LOG_ERROR("sql.sql", "Table `mod_item_upgrade_stats_req` has invalid `req_val2` {} (item count invalid) for `id` {}, skip", val2, id);
 +            return false;
++        }
++        case ItemUpgrade::REQ_TYPE_ALLOWED_ENTRY:
++        {
++            const ItemTemplate* itemTemplate = sObjectMgr->GetItemTemplate(val1Int);
++            if (!itemTemplate)
++            {
++                LOG_ERROR("sql.sql", "Table `mod_item_upgrade_stats_req` has invalid `req_val1` {} (item entry not found) for `id` {}, skip", val1, id);
++                return false;
++            }
++            return true;
++        }
 +    }
 +    return false;
 +}
@@ -535,14 +563,6 @@ index 000000000..8c2d02bd4
 +    return playerPagedData;
 +}
 +
-+const ItemUpgrade::PagedData* ItemUpgrade::GetPagedDataPtr(const Player* player) const
-+{
-+    if (playerPagedData.find(player->GetGUID().GetCounter()) != playerPagedData.end())
-+        return &playerPagedData.at(player->GetGUID().GetCounter());
-+
-+    return nullptr;
-+}
-+
 +bool ItemUpgrade::_AddPagedData(Player* player, const PagedData& pagedData, uint32 page) const
 +{
 +    const std::vector<Identifier*>& data = pagedData.data;
@@ -557,9 +577,10 @@ index 000000000..8c2d02bd4
 +    if (highIndex >= data.size())
 +        highIndex = data.size() - 1;
 +
++    Item* item = nullptr;
 +    if (pagedData.type == PAGED_DATA_TYPE_STATS || pagedData.type == PAGED_DATA_TYPE_REQS || pagedData.type == PAGED_DATA_TYPE_UPGRADED_ITEMS_STATS)
 +    {
-+        Item* item = player->GetItemByGuid(pagedData.item.guid);
++        item = player->GetItemByGuid(pagedData.item.guid);
 +        if (!IsValidItemForUpgrade(item, player))
 +            return false;
 +
@@ -665,7 +686,7 @@ index 000000000..8c2d02bd4
 +    }
 +
 +    if (pagedData.type == PAGED_DATA_TYPE_REQS)
-+        AddGossipItemFor(player, GOSSIP_ICON_TRAINER, (MeetsRequirement(player, pagedData.upgradeStat) ? "|cff056e3a[PURCHASE]|r" : "|cffb50505[PURCHASE]|r"), GOSSIP_SENDER_MAIN + 1, GOSSIP_ACTION_INFO_DEF + 1, "Are you sure you want to upgrade?", 0, false);
++        AddGossipItemFor(player, GOSSIP_ICON_TRAINER, (MeetsRequirement(player, item, pagedData.upgradeStat) ? "|cff056e3a[PURCHASE]|r" : "|cffb50505[PURCHASE]|r"), GOSSIP_SENDER_MAIN + 1, GOSSIP_ACTION_INFO_DEF + 1, "Are you sure you want to upgrade?", 0, false);
 +
 +    if (page + 1 < pagedData.totalPages)
 +        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "[Next] ->", GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page + 1);
@@ -765,7 +786,7 @@ index 000000000..8c2d02bd4
 +                        }
 +                    }
 +
-+                    BuildStatsRequirementsCatalogue(player, upgradeStat);
++                    BuildStatsRequirementsCatalogue(player, item, upgradeStat);
 +                    return AddPagedData(player, creature, 0);
 +                }
 +            }
@@ -780,7 +801,7 @@ index 000000000..8c2d02bd4
 +                SendMessage(player, "Item is no longer available for upgrade.");
 +            else
 +            {
-+                BuildStatsRequirementsCatalogue(player, pagedData.upgradeStat);
++                BuildStatsRequirementsCatalogue(player, item, pagedData.upgradeStat);
 +                return AddPagedData(player, creature, pagedData.currentPage);
 +            }
 +        }
@@ -856,7 +877,7 @@ index 000000000..8c2d02bd4
 +    if (!item)
 +        return false;
 +
-+    if (!MeetsRequirement(player, pagedData.upgradeStat))
++    if (!MeetsRequirement(player, item, pagedData.upgradeStat))
 +    {
 +        SendMessage(player, "You do not meet the requirements to buy this upgrade.");
 +        return true;
@@ -952,7 +973,7 @@ index 000000000..8c2d02bd4
 +    characterUpgradeData[guid].clear();
 +}
 +
-+void ItemUpgrade::BuildStatsRequirementsCatalogue(const Player* player, const UpgradeStat* upgradeStat)
++void ItemUpgrade::BuildStatsRequirementsCatalogue(const Player* player, const Item* item, const UpgradeStat* upgradeStat)
 +{
 +    PagedData& pagedData = GetPagedData(player);
 +    pagedData.Reset();
@@ -985,15 +1006,20 @@ index 000000000..8c2d02bd4
 +                    oss << "ARENA: " << (uint32)req.reqVal1 << " points";
 +                    break;
 +                case REQ_TYPE_ITEM:
++                {
 +                    const ItemTemplate* proto = sObjectMgr->GetItemTemplate((uint32)req.reqVal1);
 +                    oss << ItemLink(player, proto, 0);
 +                    if (req.reqVal2 > 1.0f)
 +                        oss << " - " << (uint32)req.reqVal2 << "x";
 +                    break;
++                }
++                case REQ_TYPE_ALLOWED_ENTRY:
++                    oss << "ITEM ENTRY CONSTRAINT";
++                    break;
 +            }
 +
 +            std::string missing;
-+            if (!MeetsRequirement(player, req))
++            if (!MeetsRequirement(player, item, req))
 +            {
 +                switch (req.reqType)
 +                {
@@ -1009,6 +1035,9 @@ index 000000000..8c2d02bd4
 +                    case REQ_TYPE_ITEM:
 +                        missing = "missing " + Acore::ToString<uint32>((uint32)req.reqVal2 - player->GetItemCount((uint32)req.reqVal1, true)) + " items";
 +                        break;
++                    case REQ_TYPE_ALLOWED_ENTRY:
++                        missing = "|cffb50505CAN NEVER UPGRADE|r";
++                        break;
 +                }
 +            }
 +
@@ -1016,7 +1045,12 @@ index 000000000..8c2d02bd4
 +            if (missing.empty())
 +                oss << "|cff056e3aDONE|r";
 +            else
-+                oss << "|cffb50505IN PROGRESS|r" << " - " << missing;
++            {
++                if (req.reqType != REQ_TYPE_ALLOWED_ENTRY)
++                    oss << "|cffb50505IN PROGRESS|r" << " - " << missing;
++                else
++                    oss << missing;
++            }
 +
 +            Identifier* identifier = new Identifier();
 +            identifier->id = 0;
@@ -1124,7 +1158,19 @@ index 000000000..8c2d02bd4
 +    pagedData.SortAndCalculateTotals();
 +}
 +
-+bool ItemUpgrade::MeetsRequirement(const Player* player, const UpgradeStatReq& req) const
++const ItemUpgrade::UpgradeStatReq* ItemUpgrade::UpgradeStatReq::FindInMergedReq(float reqVal1, float reqVal2) const
++{
++    if (mergedReqs.empty())
++        return nullptr;
++
++    StatRequirementContainer::const_iterator citer = std::find_if(mergedReqs.begin(), mergedReqs.end(), [&](const UpgradeStatReq& req) { return req.reqVal1 == reqVal1 && req.reqVal2 == reqVal2; });
++    if (citer != mergedReqs.end())
++        return &*citer;
++
++    return nullptr;
++}
++
++bool ItemUpgrade::MeetsRequirement(const Player* player, const Item* item, const UpgradeStatReq& req) const
 +{
 +    switch (req.reqType)
 +    {
@@ -1136,19 +1182,21 @@ index 000000000..8c2d02bd4
 +            return player->GetArenaPoints() >= (uint32)req.reqVal1;
 +        case REQ_TYPE_ITEM:
 +            return player->HasItemCount((uint32)req.reqVal1, (uint32)req.reqVal2, true);
++        case REQ_TYPE_ALLOWED_ENTRY:
++            return req.FindInMergedReq(item->GetEntry()) != nullptr;
 +    }
 +
 +    return false;
 +}
 +
-+bool ItemUpgrade::MeetsRequirement(const Player* player, const UpgradeStat* upgradeStat) const
++bool ItemUpgrade::MeetsRequirement(const Player* player, const Item* item, const UpgradeStat* upgradeStat) const
 +{
 +    const StatRequirementContainer& reqs = upgradeStat->statReq;
 +    if (reqs.empty())
 +        return true;
 +
 +    for (const auto& req : reqs)
-+        if (!MeetsRequirement(player, req))
++        if (!MeetsRequirement(player, item, req))
 +            return false;
 +
 +    return true;
@@ -1188,69 +1236,66 @@ index 000000000..8c2d02bd4
 +    pagedData.upgradeStat = nullptr;
 +    pagedData.type = PAGED_DATA_TYPE_STATS;
 +
-+    std::vector<_ItemStat> statInfoList = LoadItemStatInfo(item);
-+    std::unordered_map<uint32, bool> processed;
-+    for (const UpgradeStat& stat : upgradeStatList)
++    if (IsAllowedItem(item) && !IsBlacklistedItem(item))
 +    {
-+        if (processed.find(stat.statType) != processed.end())
-+            continue;
-+
-+        if (!IsAllowedItem(item))
-+            continue;
-+
-+        if (IsBlacklistedItem(item))
-+            continue;
-+
-+        if (!IsAllowedStatType(stat.statType))
-+            continue;
-+
-+        const _ItemStat* statInfo = GetStatByType(statInfoList, stat.statType);
-+        if (!statInfo)
-+            continue;
-+
-+        processed[stat.statType] = true;
-+
-+        const UpgradeStat* foundUpgrade = FindUpgradeForItem(player, item, stat.statType);
-+        const UpgradeStat* currentUpgrade = nullptr;
-+        Identifier* identifier = new Identifier();
-+        std::ostringstream oss;
-+        oss << "UPGRADE " << StatTypeToString(statInfo->ItemStatType) << " ";
-+        if (foundUpgrade != nullptr)
++        std::vector<_ItemStat> statInfoList = LoadItemStatInfo(item);
++        std::unordered_map<uint32, bool> processed;
++        for (const UpgradeStat& stat : upgradeStatList)
 +        {
-+            currentUpgrade = foundUpgrade;
++            if (processed.find(stat.statType) != processed.end())
++                continue;
 +
-+            const UpgradeStat* nextUpgrade = FindUpgradeStat(stat.statType, foundUpgrade->statRank + 1);
-+            if (nextUpgrade == nullptr)
++            if (!IsAllowedStatType(stat.statType))
++                continue;
++
++            const _ItemStat* statInfo = GetStatByType(statInfoList, stat.statType);
++            if (!statInfo)
++                continue;
++
++            processed[stat.statType] = true;
++
++            const UpgradeStat* foundUpgrade = FindUpgradeForItem(player, item, stat.statType);
++            const UpgradeStat* currentUpgrade = nullptr;
++            Identifier* identifier = new Identifier();
++            std::ostringstream oss;
++            oss << "UPGRADE " << StatTypeToString(statInfo->ItemStatType) << " ";
++            if (foundUpgrade != nullptr)
 +            {
-+                oss << "[RANK " << foundUpgrade->statRank << " |cffb50505MAX|r]";
-+                identifier->id = foundUpgrade->statId;
++                currentUpgrade = foundUpgrade;
++
++                const UpgradeStat* nextUpgrade = FindUpgradeStat(stat.statType, foundUpgrade->statRank + 1);
++                if (nextUpgrade == nullptr)
++                {
++                    oss << "[RANK " << foundUpgrade->statRank << " |cffb50505MAX|r]";
++                    identifier->id = foundUpgrade->statId;
++                }
++                else
++                {
++                    oss << "[RANK " << foundUpgrade->statRank << " -> " << "|cff056e3a" << foundUpgrade->statRank + 1 << "|r" << "]";
++                    identifier->id = nextUpgrade->statId;
++                    foundUpgrade = nextUpgrade;
++                }
 +            }
 +            else
 +            {
-+                oss << "[RANK " << foundUpgrade->statRank << " -> " << "|cff056e3a" << foundUpgrade->statRank + 1 << "|r" << "]";
-+                identifier->id = nextUpgrade->statId;
-+                foundUpgrade = nextUpgrade;
++                foundUpgrade = FindUpgradeStat(stat.statType, 1);
++                if (foundUpgrade == nullptr)
++                    continue;
++
++                oss << "[ACQUIRE RANK 1]";
++                identifier->id = foundUpgrade->statId;
 +            }
-+        }
-+        else
-+        {
-+            foundUpgrade = FindUpgradeStat(stat.statType, 1);
-+            if (foundUpgrade == nullptr)
-+                continue;
 +
-+            oss << "[ACQUIRE RANK 1]";
-+            identifier->id = foundUpgrade->statId;
-+        }
++            oss << " " << "[" << foundUpgrade->statModPct << "% increase - ";
++            oss << "|cffb50505" << statInfo->ItemStatValue << "|r --> ";
++            oss << "|cff056e3a" << CalculateModPct(statInfo->ItemStatValue, foundUpgrade) << "|r]";
++            if (currentUpgrade != nullptr)
++                oss << " [CURRENT: " << CalculateModPct(statInfo->ItemStatValue, currentUpgrade) << "]";
 +
-+        oss << " " << "[" << foundUpgrade->statModPct << "% increase - ";
-+        oss << "|cffb50505" << statInfo->ItemStatValue << "|r --> ";
-+        oss << "|cff056e3a" << CalculateModPct(statInfo->ItemStatValue, foundUpgrade) << "|r]";
-+        if (currentUpgrade != nullptr)
-+            oss << " [CURRENT: " << CalculateModPct(statInfo->ItemStatValue, currentUpgrade) << "]";
-+        
-+        identifier->uiName = oss.str();
-+        identifier->name = StatTypeToString(stat.statType);
-+        pagedData.data.push_back(identifier);
++            identifier->uiName = oss.str();
++            identifier->name = StatTypeToString(stat.statType);
++            pagedData.data.push_back(identifier);
++        }
 +    }
 +
 +    pagedData.SortAndCalculateTotals();
@@ -1956,10 +2001,10 @@ index 000000000..8c2d02bd4
 +}
 diff --git a/src/server/game/Entities/Item/item_upgrade.h b/src/server/game/Entities/Item/item_upgrade.h
 new file mode 100644
-index 000000000..d8183175b
+index 000000000..b6e8bdeb8
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.h
-@@ -0,0 +1,276 @@
+@@ -0,0 +1,286 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -2028,6 +2073,7 @@ index 000000000..d8183175b
 +        REQ_TYPE_HONOR,
 +        REQ_TYPE_ARENA,
 +        REQ_TYPE_ITEM,
++        REQ_TYPE_ALLOWED_ENTRY,
 +        MAX_REQ_TYPE
 +    };
 +
@@ -2059,6 +2105,8 @@ index 000000000..d8183175b
 +         */ 
 +        float reqVal2;
 +
++        std::vector<UpgradeStatReq> mergedReqs;
++
 +        UpgradeStatReq()
 +        {
 +            statId = 0;
@@ -2072,6 +2120,14 @@ index 000000000..d8183175b
 +
 +        UpgradeStatReq(uint32 statId, UpgradeStatReqType reqType, float reqVal1)
 +            : statId(statId), reqType(reqType), reqVal1(reqVal1), reqVal2(0.0f) {}
++
++        UpgradeStatReq(uint32 statId, UpgradeStatReqType reqType)
++            : statId(statId), reqType(reqType), reqVal1(0.0f), reqVal2(0.0f) {}
++
++        UpgradeStatReq(uint32 statId, UpgradeStatReqType reqType, const std::vector<UpgradeStatReq>& mergedReqs)
++            : statId(statId), reqType(reqType), reqVal1(0.0f), reqVal2(0.0f), mergedReqs(mergedReqs) {}
++
++        const UpgradeStatReq* FindInMergedReq(float reqVal1, float reqVal2 = 0.0f) const;
 +    };
 +    typedef std::vector<UpgradeStatReq> StatRequirementContainer;
 +
@@ -2116,13 +2172,12 @@ index 000000000..d8183175b
 +
 +    void BuildUpgradableItemCatalogue(const Player* player);
 +    void BuildStatsUpgradeCatalogue(const Player* player, const Item* item);
-+    void BuildStatsRequirementsCatalogue(const Player* player, const UpgradeStat* upgradeStat);
++    void BuildStatsRequirementsCatalogue(const Player* player, const Item* item, const UpgradeStat* upgradeStat);
 +    void BuildAlreadyUpgradedItemsCatalogue(const Player* player, PagedDataType type);
 +    void BuildItemUpgradeStatsCatalogue(const Player* player, const Item* item);
 +
 +    PagedData& GetPagedData(const Player* player);
 +    PagedDataMap& GetPagedDataMap();
-+    const PagedData* GetPagedDataPtr(const Player* player) const;
 +    bool AddPagedData(Player* player, Creature* creature, uint32 page);
 +    bool TakePagedDataAction(Player* player, Creature* creature, uint32 action);
 +
@@ -2216,8 +2271,8 @@ index 000000000..d8183175b
 +    const UpgradeStat* FindUpgradeStat(uint32 statType, uint16 rank) const;
 +    std::vector<const UpgradeStat*> FindUpgradesForItem(const Player* player, const Item* item) const;
 +    const UpgradeStat* FindUpgradeForItem(const Player* player, const Item* item, uint32 statType) const;
-+    bool MeetsRequirement(const Player* player, const UpgradeStatReq& req) const;
-+    bool MeetsRequirement(const Player* player, const UpgradeStat* upgradeStat) const;
++    bool MeetsRequirement(const Player* player, const Item* item, const UpgradeStatReq& req) const;
++    bool MeetsRequirement(const Player* player, const Item* item, const UpgradeStat* upgradeStat) const;
 +    void TakeRequirements(Player* player, const UpgradeStat* upgradeStat);
 +    bool PurchaseUpgrade(Player* player);
 +    void AddUpgradedItemToPagedData(const Item* item, const Player* player, PagedData& pagedData, const std::string &from);
