@@ -1,6 +1,6 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..25ce0ed21
+index 000000000..1dd0535e1
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
 @@ -0,0 +1,2047 @@
@@ -109,7 +109,7 @@ index 000000000..25ce0ed21
 +            continue;
 +        }
 +
-+        allowedItems[entry] = true;
++        allowedItems.insert(entry);
 +    } while (result->NextRow());
 +}
 +
@@ -134,7 +134,7 @@ index 000000000..25ce0ed21
 +            continue;
 +        }
 +
-+        allowedStatItems[stat_id].push_back(entry);
++        allowedStatItems[stat_id].insert(entry);
 +    } while (result->NextRow());
 +}
 +
@@ -158,7 +158,7 @@ index 000000000..25ce0ed21
 +            continue;
 +        }
 +
-+        blacklistedItems[entry] = true;
++        blacklistedItems.insert(entry);
 +    } while (result->NextRow());
 +}
 +
@@ -183,7 +183,7 @@ index 000000000..25ce0ed21
 +            continue;
 +        }
 +
-+        blacklistedStatItems[stat_id].push_back(entry);
++        blacklistedStatItems[stat_id].insert(entry);
 +    } while (result->NextRow());
 +}
 +
@@ -2034,8 +2034,8 @@ index 000000000..25ce0ed21
 +    if (allowedStatItems.find(upgrade->statId) == allowedStatItems.end())
 +        return true;
 +
-+    const std::vector<uint32>& allowedStatsForItems = allowedStatItems.at(upgrade->statId);
-+    return FindInContainer(allowedStatsForItems, item->GetEntry()) != nullptr;
++    const std::set<uint32>& allowedStatsForItems = allowedStatItems.at(upgrade->statId);
++    return allowedStatsForItems.find(item->GetEntry()) != allowedStatsForItems.end();
 +}
 +
 +bool ItemUpgrade::IsBlacklistedStatForItem(const Item* item, const UpgradeStat* upgrade) const
@@ -2043,8 +2043,8 @@ index 000000000..25ce0ed21
 +    if (blacklistedStatItems.find(upgrade->statId) == blacklistedStatItems.end())
 +        return false;
 +
-+    const std::vector<uint32>& blacklistedStatsForItems = blacklistedStatItems.at(upgrade->statId);
-+    return FindInContainer(blacklistedStatsForItems, item->GetEntry()) != nullptr;
++    const std::set<uint32>& blacklistedStatsForItems = blacklistedStatItems.at(upgrade->statId);
++    return blacklistedStatsForItems.find(item->GetEntry()) != blacklistedStatsForItems.end();
 +}
 +
 +bool ItemUpgrade::CanApplyUpgradeForItem(const Item* item, const UpgradeStat* upgrade) const
@@ -2053,7 +2053,7 @@ index 000000000..25ce0ed21
 +}
 diff --git a/src/server/game/Entities/Item/item_upgrade.h b/src/server/game/Entities/Item/item_upgrade.h
 new file mode 100644
-index 000000000..2327f68c1
+index 000000000..8f6ee199f
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.h
 @@ -0,0 +1,283 @@
@@ -2190,8 +2190,8 @@ index 000000000..2327f68c1
 +    };
 +    typedef std::unordered_map<uint32, std::vector<CharacterUpgrade>> CharacterUpgradeContainer;
 +
-+    typedef std::unordered_map<uint32, bool> ItemEntryContainer;
-+    typedef std::unordered_map<uint32, std::vector<uint32>> StatWithItemContainer;
++    typedef std::set<uint32> ItemEntryContainer;
++    typedef std::unordered_map<uint32, std::set<uint32>> StatWithItemContainer;
 +public:
 +    static constexpr const char* DefaultAllowedStats = "0,3,4,5,6,7,32,36,45";
 +
