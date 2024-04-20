@@ -95,6 +95,8 @@ There is a configuration option that allows players to restore items to their or
 ![pic6](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic6.jpg?raw=true)
 ![pic7](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic7.jpg?raw=true)
 ![pic8](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic8.jpg?raw=true)
+![pic9](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic9.jpg?raw=true)
+![pic10](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic10.jpg?raw=true)
 
 ## Credits
 - silviu20092
