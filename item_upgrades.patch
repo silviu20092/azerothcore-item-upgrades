@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..7a071593e
+index 000000000..fa8e357e7
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,2431 @@
+@@ -0,0 +1,2434 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -1569,6 +1569,9 @@ index 000000000..7a071593e
 +                    oss << " [" << FormatFloat(stat->statModPct) << "% increase, ";
 +                    oss << "|cffb50505" << foundStat->ItemStatValue << "|r --> ";
 +                    oss << "|cff056e3a" << CalculateModPct(foundStat->ItemStatValue, stat) << "|r]";
++
++                    if (currentUpgrade != nullptr)
++                        oss << " [CURRENT: " << CalculateModPct(foundStat->ItemStatValue, currentUpgrade) << "]";
 +                }
 +            }
 +
