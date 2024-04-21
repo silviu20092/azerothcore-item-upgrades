@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..3acf52195
+index 000000000..c1e2f28ab
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,2490 @@
+@@ -0,0 +1,2502 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -310,17 +310,7 @@ index 000000000..3acf52195
 +
 +        uint32 id = fields[0].Get<uint32>();
 +        uint32 statType = fields[1].Get<uint32>();
-+        if (statType >= MAX_ITEM_MOD)
-+        {
-+            LOG_ERROR("sql.sql", "Table `mod_item_upgrade_stats` has invalid `stat_type` {}, skip", statType);
-+            continue;
-+        }
 +        float statModPct = fields[2].Get<float>();
-+        if (statModPct <= 0)
-+        {
-+            LOG_ERROR("sql.sql", "Table `mod_item_upgrade_stats` has invalid `stat_mod_pct` {}, skip", statModPct);
-+            continue;
-+        }
 +        uint16 statRank = fields[3].Get<uint16>();
 +
 +        UpgradeStat upgradeStat;
@@ -1821,6 +1811,11 @@ index 000000000..3acf52195
 +    return "unknown";
 +}
 +
++bool ItemUpgrade::IsValidStatType(uint32 statType) const
++{
++    return StatTypeToString(statType) != "unknown";
++}
++
 +std::string ItemUpgrade::ItemLinkForUI(const Item* item, const Player* player) const
 +{
 +    const ItemTemplate* proto = item->GetTemplate();
@@ -2461,11 +2456,28 @@ index 000000000..3acf52195
 +    if (upgradeStatList.empty())
 +        return true;
 +
++    bool ok = true;
++    for (const UpgradeStat& upgrade : upgradeStatList)
++    {
++        if (!IsValidStatType(upgrade.statType))
++        {
++            LOG_ERROR("sql.sql", "FATAL: Table `mod_item_upgrade_stats` has invalid `stat_type` {}", upgrade.statType);
++            ok = false;
++        }
++        if (upgrade.statModPct <= 0)
++        {
++            LOG_ERROR("sql.sql", "FATAL: Table `mod_item_upgrade_stats` has invalid `stat_mod_pct` {}", upgrade.statModPct);
++            ok = false;
++        }
++    }
++
++    if (!ok)
++        return false;
++
 +    std::unordered_map<uint32, std::vector<uint16>> ranksMap;
 +    for (const UpgradeStat& upgrade : upgradeStatList)
 +        ranksMap[upgrade.statType].push_back(upgrade.statRank);
 +
-+    bool ok = true;
 +    for (auto& rpair : ranksMap)
 +    {
 +        std::vector<uint16>& ranks = rpair.second;
@@ -2496,10 +2508,10 @@ index 000000000..3acf52195
 +}
 diff --git a/src/server/game/Entities/Item/item_upgrade.h b/src/server/game/Entities/Item/item_upgrade.h
 new file mode 100644
-index 000000000..09864619c
+index 000000000..5843cdc3e
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.h
-@@ -0,0 +1,332 @@
+@@ -0,0 +1,333 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -2827,6 +2839,7 @@ index 000000000..09864619c
 +    bool PurchaseUpgradeBulk(Player* player);
 +    bool HandlePurchaseRank(Player* player, Item* item, const UpgradeStat* upgrade);
 +    bool CheckDataValidity() const;
++    bool IsValidStatType(uint32 statType) const;
 +};
 +
 +#define sItemUpgrade ItemUpgrade::instance()
