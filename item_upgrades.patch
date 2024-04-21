@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..7e42d6555
+index 000000000..3acf52195
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,2434 @@
+@@ -0,0 +1,2490 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -84,12 +84,18 @@ index 000000000..7e42d6555
 +    LoadAllowedStatsItems();
 +    LoadBlacklistedStatsItems();
 +    LoadStatRequirements(statRequirements);
++
 +    LoadUpgradeStats(statRequirements);
++    if (!CheckDataValidity())
++    {
++        LOG_ERROR("server.loading", "Found data validity errors while loading item upgrade mod tables. Check the FATAL error messages and fix the issues before attempting to restart the server");
++        World::StopNow(ERROR_EXIT_CODE);
++        return;
++    }
++
 +    LoadCharacterUpgradeData();
 +
 +    CreateUpgradesPctMap();
-+
-+    LOG_INFO("server.loading", " ");
 +}
 +
 +void ItemUpgrade::LoadAllowedItems()
@@ -332,10 +338,17 @@ index 000000000..7e42d6555
 +{
 +    characterUpgradeData.clear();
 +
++    uint32 oldMSTime = getMSTime();
++
 +    QueryResult result = CharacterDatabase.Query("SELECT guid, item_guid, stat_id FROM character_item_upgrade");
 +    if (!result)
++    {
++        LOG_INFO("server.loading", ">> Loaded 0 character item upgrades.");
++        LOG_INFO("server.loading", " ");
 +        return;
++    }
 +
++    uint32 count = 0;
 +    do
 +    {
 +        Field* fields = result->Fetch();
@@ -354,7 +367,11 @@ index 000000000..7e42d6555
 +            continue;
 +        }
 +        characterUpgradeData[guidLow].push_back(characterUpgrade);
++        count++;
 +    } while (result->NextRow());
++
++    LOG_INFO("server.loading", ">> Loaded {} character item upgrades in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
++    LOG_INFO("server.loading", " ");
 +}
 +
 +bool ItemUpgrade::IsValidReqType(uint8 reqType) const
@@ -2438,12 +2455,51 @@ index 000000000..7e42d6555
 +{
 +    return IsAllowedStatForItem(item, upgrade) && !IsBlacklistedStatForItem(item, upgrade);
 +}
++
++bool ItemUpgrade::CheckDataValidity() const
++{
++    if (upgradeStatList.empty())
++        return true;
++
++    std::unordered_map<uint32, std::vector<uint16>> ranksMap;
++    for (const UpgradeStat& upgrade : upgradeStatList)
++        ranksMap[upgrade.statType].push_back(upgrade.statRank);
++
++    bool ok = true;
++    for (auto& rpair : ranksMap)
++    {
++        std::vector<uint16>& ranks = rpair.second;
++        std::sort(ranks.begin(), ranks.end());
++        if (ranks[0] != 1)
++        {
++            ok = false;
++            LOG_ERROR("sql.sql", "FATAL: Table `mod_item_upgrade_stats` has invalid starting rank (`stat_rank`) {} for stat type (`stat_type`) {}", ranks[0], rpair.first);
++        }
++
++        bool consecutive = true;
++        for (uint32 i = 1; i < ranks.size(); i++)
++        {
++            if (ranks[i] != ranks[i - 1] + 1)
++            {
++                consecutive = false;
++                break;
++            }
++        }
++        if (!consecutive)
++        {
++            ok = false;
++            LOG_ERROR("sql.sql", "FATAL: Table `mod_item_upgrade_stats` does not have consecutive ranks (`stat_rank`) for stat type (`stat_type`) {}", rpair.first);
++        }
++    }
++
++    return ok;
++}
 diff --git a/src/server/game/Entities/Item/item_upgrade.h b/src/server/game/Entities/Item/item_upgrade.h
 new file mode 100644
-index 000000000..4991de00e
+index 000000000..09864619c
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.h
-@@ -0,0 +1,331 @@
+@@ -0,0 +1,332 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -2770,6 +2826,7 @@ index 000000000..4991de00e
 +    void BuildRequirementsPage(const Player* player, PagedData& pagedData, const StatRequirementContainer& reqs) const;
 +    bool PurchaseUpgradeBulk(Player* player);
 +    bool HandlePurchaseRank(Player* player, Item* item, const UpgradeStat* upgrade);
++    bool CheckDataValidity() const;
 +};
 +
 +#define sItemUpgrade ItemUpgrade::instance()
