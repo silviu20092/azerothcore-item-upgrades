@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..a09893e15
+index 000000000..7e42d6555
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,2435 @@
+@@ -0,0 +1,2434 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -1677,7 +1677,6 @@ index 000000000..a09893e15
 +                continue;
 +
 +            const UpgradeStat* currentUpgrade = FindUpgradeForItem(player, item, stat->statType);
-+            bool willUpgrade = false;
 +            if (currentUpgrade != nullptr)
 +            {
 +                const UpgradeStat* nextUpgrade = FindUpgradeStat(stat->statType, currentUpgrade->statRank + 1);
