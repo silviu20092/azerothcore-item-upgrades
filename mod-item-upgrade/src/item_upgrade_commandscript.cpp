@@ -39,7 +39,7 @@ private:
         sItemUpgrade->SetReloading(true);
         sItemUpgrade->HandleDataReload(false);
 
-        sItemUpgrade->LoadFromDB();
+        sItemUpgrade->LoadFromDB(true);
 
         sItemUpgrade->HandleDataReload(true);
         sItemUpgrade->SetReloading(false);

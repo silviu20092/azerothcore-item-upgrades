@@ -1,9 +1,9 @@
 diff --git a/src/server/game/Entities/Item/item_upgrade.cpp b/src/server/game/Entities/Item/item_upgrade.cpp
 new file mode 100644
-index 000000000..21a72485b
+index 000000000..da94e0042
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.cpp
-@@ -0,0 +1,2503 @@
+@@ -0,0 +1,2504 @@
 +/*
 + * Credits: silviu20092
 + */
@@ -71,12 +71,12 @@ index 000000000..21a72485b
 +        [](const std::string_view& str) { return *Acore::StringTo<uint32>(str); });
 +}
 +
-+void ItemUpgrade::LoadFromDB()
++void ItemUpgrade::LoadFromDB(bool reload)
 +{
 +    LOG_INFO("server.loading", " ");
 +    LOG_INFO("server.loading", "Loading item upgrade mod custom tables...");
 +
-+    CleanupDB();
++    CleanupDB(reload);
 +
 +    std::unordered_map<uint32, StatRequirementContainer> statRequirements;
 +    LoadAllowedItems();
@@ -196,12 +196,13 @@ index 000000000..21a72485b
 +    } while (result->NextRow());
 +}
 +
-+void ItemUpgrade::CleanupDB()
++void ItemUpgrade::CleanupDB(bool reload)
 +{
 +    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
 +    trans->Append("DELETE FROM mod_item_upgrade_stats_req WHERE stat_id NOT IN (SELECT id FROM mod_item_upgrade_stats)");
 +    trans->Append("DELETE FROM character_item_upgrade WHERE stat_id NOT IN (SELECT id FROM mod_item_upgrade_stats)");
-+    trans->Append("DELETE FROM character_item_upgrade WHERE NOT EXISTS (SELECT 1 FROM item_instance WHERE item_instance.guid = character_item_upgrade.item_guid)");
++    if (!reload)
++        trans->Append("DELETE FROM character_item_upgrade WHERE NOT EXISTS (SELECT 1 FROM item_instance WHERE item_instance.guid = character_item_upgrade.item_guid)");
 +    trans->Append("DELETE FROM mod_item_upgrade_allowed_stats_items WHERE stat_id NOT IN (SELECT id FROM mod_item_upgrade_stats)");
 +    trans->Append("DELETE FROM mod_item_upgrade_blacklisted_stats_items WHERE stat_id NOT IN (SELECT id FROM mod_item_upgrade_stats)");
 +    CharacterDatabase.DirectCommitTransaction(trans);
@@ -2509,7 +2510,7 @@ index 000000000..21a72485b
 +}
 diff --git a/src/server/game/Entities/Item/item_upgrade.h b/src/server/game/Entities/Item/item_upgrade.h
 new file mode 100644
-index 000000000..5843cdc3e
+index 000000000..e7a4d3003
 --- /dev/null
 +++ b/src/server/game/Entities/Item/item_upgrade.h
 @@ -0,0 +1,333 @@
@@ -2698,7 +2699,7 @@ index 000000000..5843cdc3e
 +    bool IsAllowedStatType(uint32 statType) const;
 +    void LoadAllowedStats(const std::string& stats);
 +
-+    void LoadFromDB();
++    void LoadFromDB(bool reload = false);
 +
 +    void BuildUpgradableItemCatalogue(const Player* player, PagedDataType type);
 +    void BuildStatsUpgradeCatalogue(const Player* player, const Item* item);
@@ -2789,7 +2790,7 @@ index 000000000..5843cdc3e
 +    static std::string CopperToMoneyStr(uint32 money, bool colored);
 +    static std::string FormatFloat(float val, uint32 decimals = 2);
 +
-+    void CleanupDB();
++    void CleanupDB(bool reload);
 +    void LoadStatRequirements(std::unordered_map<uint32, StatRequirementContainer> &statRequirementMap);
 +    void LoadUpgradeStats(const std::unordered_map<uint32, StatRequirementContainer>& statRequirementMap);
 +    void LoadCharacterUpgradeData();
