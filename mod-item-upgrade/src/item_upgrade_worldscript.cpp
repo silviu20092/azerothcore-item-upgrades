@@ -9,7 +9,11 @@
 class item_upgrade_worldscript : public WorldScript
 {
 public:
-    item_upgrade_worldscript() : WorldScript("item_upgrade_worldscript") {}
+    item_upgrade_worldscript() : WorldScript("item_upgrade_worldscript",
+        {
+            WORLDHOOK_ON_AFTER_CONFIG_LOAD,
+            WORLDHOOK_ON_BEFORE_WORLD_INITIALIZED
+        }) {}
 
     void OnAfterConfigLoad(bool reload) override
     {
