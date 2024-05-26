@@ -98,6 +98,7 @@ public:
         REQ_TYPE_HONOR,
         REQ_TYPE_ARENA,
         REQ_TYPE_ITEM,
+        REQ_TYPE_NONE,
         MAX_REQ_TYPE
     };
 
@@ -142,6 +143,9 @@ public:
 
         UpgradeStatReq(uint32 statId, UpgradeStatReqType reqType, float reqVal1)
             : statId(statId), reqType(reqType), reqVal1(reqVal1), reqVal2(0.0f) {}
+
+        UpgradeStatReq(uint32 statId, UpgradeStatReqType reqType)
+            : statId(statId), reqType(reqType), reqVal1(0.0f), reqVal2(0.0f) {}
     };
     typedef std::vector<UpgradeStatReq> StatRequirementContainer;
 
@@ -151,7 +155,6 @@ public:
         uint32 statType;
         float statModPct;
         uint16 statRank;
-        StatRequirementContainer statReq;
     };
     typedef std::vector<UpgradeStat> UpgradeStatContainer;
 
@@ -190,7 +193,7 @@ public:
     void BuildStatsUpgradeCatalogueBulk(const Player* player, const Item* item);
     void BuildStatsUpgradeByPctCatalogueBulk(const Player* player, const Item* item, float pct);
     void BuildStatsRequirementsCatalogueBulk(const Player* player, const Item* item, float pct);
-    void BuildStatsRequirementsCatalogue(const Player* player, const UpgradeStat* upgradeStat);
+    void BuildStatsRequirementsCatalogue(const Player* player, const UpgradeStat* upgradeStat, const Item* item);
     void BuildAlreadyUpgradedItemsCatalogue(const Player* player, PagedDataType type);
     void BuildItemUpgradeStatsCatalogue(const Player* player, const Item* item);
 
@@ -259,6 +262,9 @@ private:
 
     std::map<float, std::vector<const ItemUpgrade::UpgradeStat*>> upgradesPctMap;
 
+    std::unordered_map<uint32, StatRequirementContainer> baseStatRequirements;
+    std::unordered_map<uint32, std::unordered_map<uint32, StatRequirementContainer>> overrideStatRequirements;
+
     bool allowPurgeUpgrades;
     uint32 purgeToken;
     uint32 purgeTokenCount;
@@ -275,15 +281,16 @@ private:
     static std::string FormatFloat(float val, uint32 decimals = 2);
 
     void CleanupDB(bool reload);
-    void LoadStatRequirements(std::unordered_map<uint32, StatRequirementContainer> &statRequirementMap);
-    void LoadUpgradeStats(const std::unordered_map<uint32, StatRequirementContainer>& statRequirementMap);
+    void LoadStatRequirements();
+    void LoadStatRequirementsOverrides();
+    void LoadUpgradeStats();
     void LoadCharacterUpgradeData();
     void LoadAllowedItems();
     void LoadAllowedStatsItems();
     void LoadBlacklistedItems();
     void LoadBlacklistedStatsItems();
     bool IsValidReqType(uint8 reqType) const;
-    bool ValidateReq(uint32 id, UpgradeStatReqType reqType, float val1, float val2) const;
+    bool ValidateReq(uint32 id, UpgradeStatReqType reqType, float val1, float val2, const std::string& table) const;
     void AddItemToPagedData(const Item* item, const Player* player, PagedData& pagedData);
     bool _AddPagedData(Player* player, const PagedData& pagedData, uint32 page) const;
     void NoPagedData(Player* player, const PagedData& pagedData) const;
@@ -297,10 +304,10 @@ private:
     std::vector<const UpgradeStat*> FindUpgradesForItem(const Player* player, const Item* item) const;
     const UpgradeStat* FindUpgradeForItem(const Player* player, const Item* item, uint32 statType) const;
     bool MeetsRequirement(const Player* player, const UpgradeStatReq& req) const;
-    bool MeetsRequirement(const Player* player, const UpgradeStat* upgradeStat) const;
-    bool MeetsRequirement(const Player* player, const StatRequirementContainer& reqs) const;
-    void TakeRequirements(Player* player, const UpgradeStat* upgradeStat);
-    void TakeRequirements(Player* player, const StatRequirementContainer& reqs);
+    bool MeetsRequirement(const Player* player, const UpgradeStat* upgradeStat, const Item* item) const;
+    bool MeetsRequirement(const Player* player, const StatRequirementContainer* reqs) const;
+    void TakeRequirements(Player* player, const UpgradeStat* upgradeStat, const Item* item);
+    void TakeRequirements(Player* player, const StatRequirementContainer* reqs);
     bool PurchaseUpgrade(Player* player);
     void AddUpgradedItemToPagedData(const Item* item, const Player* player, PagedData& pagedData, const std::string &from);
     void HandleDataReload(Player* player, bool apply);
@@ -320,12 +327,14 @@ private:
     Item* FindItemIdentifierFromPage(const PagedData& pagedData, uint32 id, Player* player) const;
     void CreateUpgradesPctMap();
     std::unordered_map<uint32, const UpgradeStat*> FindAllUpgradeableRanks(const Player* player, const Item* item, float pct) const;
-    StatRequirementContainer BuildBulkRequirements(const std::unordered_map<uint32, const UpgradeStat*>& upgrades) const;
-    void BuildRequirementsPage(const Player* player, PagedData& pagedData, const StatRequirementContainer& reqs) const;
+    StatRequirementContainer BuildBulkRequirements(const std::unordered_map<uint32, const UpgradeStat*>& upgrades, const Item* item) const;
+    void BuildRequirementsPage(const Player* player, PagedData& pagedData, const StatRequirementContainer* reqs) const;
     bool PurchaseUpgradeBulk(Player* player);
     bool HandlePurchaseRank(Player* player, Item* item, const UpgradeStat* upgrade);
     bool CheckDataValidity() const;
     bool IsValidStatType(uint32 statType) const;
+    const StatRequirementContainer* GetStatRequirements(const UpgradeStat* upgrade, const Item* item) const;
+    bool EmptyRequirements(const StatRequirementContainer* reqs) const;
 };
 
 #define sItemUpgrade ItemUpgrade::instance()

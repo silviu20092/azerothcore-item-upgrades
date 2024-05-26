@@ -40,6 +40,7 @@ Let's say you inserted the two lines and their **id** is 10 (for rank 1) and 11 
   * 2 - requires **honor points**
   * 3 - requires **arena points**
   * 4 - requires **item(s)**
+  * 5 - requires **NOTHING**, has no effect whether added or not in this table, should not be used here, only in **mod_item_upgrade_stats_req_override** (see below)
 * **req_val1** - based on **req_type**:
   * when req_type = 1 (money), then this is a numeric value corresponding to the amount of required **copper** (e.g 10000000 means the rank will require 1000 gold to be bought)
   * when req_type = 2 (honor), then this is a numeric value corresponding to how many honor points are required to buy the rank
@@ -52,6 +53,10 @@ Let's say you inserted the two lines and their **id** is 10 (for rank 1) and 11 
 So let's say you want players to upgrade stamina by 5% for **FREE**, then you don't have to insert anything in this table for **stat_id** 10. But for the 10% increase, you want the players to have 10x Badge of Justice and 1000 honor. So, we need to insert two lines: one with **stat_id** = 11, **req_type** = 2 (honor) and **req_val1** = 1000 and another line with **stat_id** = 11, **req_type** = 4 (item), **req_val1** = 29434 (entry for Badge of Justice) and **req_val2** = 10 (requires 10x badges).
 
 There is some sample data already inserted in these tables.
+
+### Overriding requirements on per item basis
+
+**mod_item_upgrade_stats_req** will be used to globally define requirements for each rank. This means that **EVERY** item will have the same requirements for a certain rank. We can override this behaviour and set requirements for each item individually. For this, use **mod_item_upgrade_stats_req_override** table which has the exact same structure as **mod_item_upgrade_stats_req**, except there is one more field: **item_entry** which is the entry of the item. So simply follow the above procedure to add requirements and simply fill **item_entry** with the entry of the item that you want.
 
 ### Allowing and blacklisting items
 

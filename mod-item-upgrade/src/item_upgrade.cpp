@@ -72,14 +72,14 @@ void ItemUpgrade::LoadFromDB(bool reload)
 
     CleanupDB(reload);
 
-    std::unordered_map<uint32, StatRequirementContainer> statRequirements;
     LoadAllowedItems();
     LoadBlacklistedItems();
     LoadAllowedStatsItems();
     LoadBlacklistedStatsItems();
-    LoadStatRequirements(statRequirements);
+    LoadStatRequirements();
+    LoadStatRequirementsOverrides();
 
-    LoadUpgradeStats(statRequirements);
+    LoadUpgradeStats();
     if (!CheckDataValidity())
     {
         LOG_ERROR("server.loading", "Found data validity errors while loading item upgrade mod tables. Check the FATAL error messages and fix the issues before attempting to restart the server");
@@ -194,6 +194,7 @@ void ItemUpgrade::CleanupDB(bool reload)
 {
     CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
     trans->Append("DELETE FROM mod_item_upgrade_stats_req WHERE stat_id NOT IN (SELECT id FROM mod_item_upgrade_stats)");
+    trans->Append("DELETE FROM mod_item_upgrade_stats_req_override WHERE stat_id NOT IN (SELECT id FROM mod_item_upgrade_stats)");
     trans->Append("DELETE FROM character_item_upgrade WHERE stat_id NOT IN (SELECT id FROM mod_item_upgrade_stats)");
     if (!reload)
         trans->Append("DELETE FROM character_item_upgrade WHERE NOT EXISTS (SELECT 1 FROM item_instance WHERE item_instance.guid = character_item_upgrade.item_guid)");
@@ -255,12 +256,20 @@ void ItemUpgrade::MergeStatRequirements(std::unordered_map<uint32, StatRequireme
                 newStatReq.push_back(UpgradeStatReq(statPair.first, REQ_TYPE_ITEM, itemPair.first, itemPair.second));
         }
 
+        StatRequirementContainer::const_iterator citer = std::find_if(statPair.second.begin(), statPair.second.end(),
+            [&](const UpgradeStatReq& req) { return req.reqType == REQ_TYPE_NONE; });
+        if (citer != statPair.second.end()) {
+            newStatReq.push_back(UpgradeStatReq(statPair.first, REQ_TYPE_NONE));
+        }
+
         statPair.second = newStatReq;
     }
 }
 
-void ItemUpgrade::LoadStatRequirements(std::unordered_map<uint32, StatRequirementContainer>& statRequirementMap)
+void ItemUpgrade::LoadStatRequirements()
 {
+    baseStatRequirements.clear();
+
     QueryResult result = CharacterDatabase.Query("SELECT id, stat_id, req_type, req_val1, req_val2 FROM mod_item_upgrade_stats_req");
     if (!result)
         return;
@@ -278,7 +287,7 @@ void ItemUpgrade::LoadStatRequirements(std::unordered_map<uint32, StatRequiremen
         }
         float reqVal1 = fields[3].Get<float>();
         float reqVal2 = fields[4].Get<float>();
-        if (!ValidateReq(fields[0].Get<uint32>(), (UpgradeStatReqType)reqType, reqVal1, reqVal2))
+        if (!ValidateReq(fields[0].Get<uint32>(), (UpgradeStatReqType)reqType, reqVal1, reqVal2, "mod_item_upgrade_stats_req"))
             continue;
 
         UpgradeStatReq statReq;
@@ -286,13 +295,56 @@ void ItemUpgrade::LoadStatRequirements(std::unordered_map<uint32, StatRequiremen
         statReq.reqType = (UpgradeStatReqType)reqType;
         statReq.reqVal1 = reqVal1;
         statReq.reqVal2 = reqVal2;
-        statRequirementMap[statId].push_back(statReq);
+        baseStatRequirements[statId].push_back(statReq);
     } while (result->NextRow());
 
-    MergeStatRequirements(statRequirementMap);
+    MergeStatRequirements(baseStatRequirements);
 }
 
-void ItemUpgrade::LoadUpgradeStats(const std::unordered_map<uint32, StatRequirementContainer>& statRequirementMap)
+void ItemUpgrade::LoadStatRequirementsOverrides()
+{
+    overrideStatRequirements.clear();
+
+    QueryResult result = CharacterDatabase.Query("SELECT id, stat_id, item_entry, req_type, req_val1, req_val2 FROM mod_item_upgrade_stats_req_override");
+    if (!result)
+        return;
+
+    do
+    {
+        Field* fields = result->Fetch();
+
+        uint32 statId = fields[1].Get<uint32>();
+        uint8 reqType = fields[3].Get<uint8>();
+        if (!IsValidReqType(reqType))
+        {
+            LOG_ERROR("sql.sql", "Table `mod_item_upgrade_stats_req_override` has invalid `req_type` {}, skip", reqType);
+            continue;
+        }
+        uint32 entry = fields[2].Get<uint32>();
+        const ItemTemplate* proto = sObjectMgr->GetItemTemplate(entry);
+        if (proto == nullptr) {
+            LOG_ERROR("sql.sql", "Table `mod_item_upgrade_stats_req_override` has invalid `item_entry` {}, skip", entry);
+            continue;
+        }
+        float reqVal1 = fields[4].Get<float>();
+        float reqVal2 = fields[5].Get<float>();
+        if (!ValidateReq(fields[0].Get<uint32>(), (UpgradeStatReqType)reqType, reqVal1, reqVal2, "mod_item_upgrade_stats_req_override"))
+            continue;
+
+        UpgradeStatReq statReq;
+        statReq.statId = statId;
+        statReq.reqType = (UpgradeStatReqType)reqType;
+        statReq.reqVal1 = reqVal1;
+        statReq.reqVal2 = reqVal2;
+
+        overrideStatRequirements[entry][statId].push_back(statReq);
+    } while (result->NextRow());
+
+    for (auto& pair : overrideStatRequirements)
+        MergeStatRequirements(pair.second);
+}
+
+void ItemUpgrade::LoadUpgradeStats()
 {
     upgradeStatList.clear();
 
@@ -314,8 +366,6 @@ void ItemUpgrade::LoadUpgradeStats(const std::unordered_map<uint32, StatRequirem
         upgradeStat.statType = statType;
         upgradeStat.statModPct = statModPct;
         upgradeStat.statRank = statRank;
-        if (statRequirementMap.find(id) != statRequirementMap.end())
-            upgradeStat.statReq = statRequirementMap.at(id);
         upgradeStatList.push_back(upgradeStat);
     } while (result->NextRow());
 }
@@ -365,7 +415,7 @@ bool ItemUpgrade::IsValidReqType(uint8 reqType) const
     return reqType >= REQ_TYPE_COPPER && reqType < MAX_REQ_TYPE;
 }
 
-bool ItemUpgrade::ValidateReq(uint32 id, UpgradeStatReqType reqType, float val1, float val2) const
+bool ItemUpgrade::ValidateReq(uint32 id, UpgradeStatReqType reqType, float val1, float val2, const std::string& table) const
 {
     int32 val1Int = static_cast<int32>(val1);
     switch (reqType)
@@ -373,32 +423,34 @@ bool ItemUpgrade::ValidateReq(uint32 id, UpgradeStatReqType reqType, float val1,
         case ItemUpgrade::REQ_TYPE_COPPER:
             if (val1Int >= 1 && val1Int <= MAX_MONEY_AMOUNT)
                 return true;
-            LOG_ERROR("sql.sql", "Table `mod_item_upgrade_stats_req` has invalid `req_val1` {} (copper amount) for `id` {}, skip", val1, id);
+            LOG_ERROR("sql.sql", "Table `{}` has invalid `req_val1` {} (copper amount) for `id` {}, skip", table, val1, id);
             return false;
         case ItemUpgrade::REQ_TYPE_HONOR:
             if (val1Int >= 1 && val1Int <= sWorld->getIntConfig(CONFIG_MAX_HONOR_POINTS))
                 return true;
-            LOG_ERROR("sql.sql", "Table `mod_item_upgrade_stats_req` has invalid `req_val1` {} (honor points) for `id` {}, skip", val1, id);
+            LOG_ERROR("sql.sql", "Table `{}` has invalid `req_val1` {} (honor points) for `id` {}, skip", table, val1, id);
             return false;
         case ItemUpgrade::REQ_TYPE_ARENA:
             if (val1Int >= 1 && val1Int <= sWorld->getIntConfig(CONFIG_MAX_ARENA_POINTS))
                 return true;
-            LOG_ERROR("sql.sql", "Table `mod_item_upgrade_stats_req` has invalid `req_val1` {} (arena points) for `id` {}, skip", val1, id);
+            LOG_ERROR("sql.sql", "Table `{}` has invalid `req_val1` {} (arena points) for `id` {}, skip", table, val1, id);
             return false;
         case ItemUpgrade::REQ_TYPE_ITEM:
         {
             const ItemTemplate* itemTemplate = sObjectMgr->GetItemTemplate(val1Int);
             if (!itemTemplate)
             {
-                LOG_ERROR("sql.sql", "Table `mod_item_upgrade_stats_req` has invalid `req_val1` {} (item entry not found) for `id` {}, skip", val1, id);
+                LOG_ERROR("sql.sql", "Table `{}` has invalid `req_val1` {} (item entry not found) for `id` {}, skip", table, val1, id);
                 return false;
             }
             int32 val2Int = static_cast<int32>(val2);
             if (val2Int >= 1)
                 return true;
-            LOG_ERROR("sql.sql", "Table `mod_item_upgrade_stats_req` has invalid `req_val2` {} (item count invalid) for `id` {}, skip", val2, id);
+            LOG_ERROR("sql.sql", "Table `{}` has invalid `req_val2` {} (item count invalid) for `id` {}, skip", table, val2, id);
             return false;
         }
+        case ItemUpgrade::REQ_TYPE_NONE:
+            return true;
     }
     return false;
 }
@@ -612,10 +664,11 @@ bool ItemUpgrade::_AddPagedData(Player* player, const PagedData& pagedData, uint
         highIndex = data.size() - 1;
 
     std::unordered_map<uint32, const UpgradeStat*> upgrades;
+    Item* item = nullptr;
     if (pagedData.type == PAGED_DATA_TYPE_STATS || pagedData.type == PAGED_DATA_TYPE_REQS || pagedData.type == PAGED_DATA_TYPE_UPGRADED_ITEMS_STATS
         || pagedData.type == PAGED_DATA_TYPE_STATS_BULK || pagedData.type == PAGED_DATA_TYPE_STAT_UPGRADE_BULK || pagedData.type == PAGED_DATA_TYPE_REQS_BULK)
     {
-        Item* item = player->GetItemByGuid(pagedData.item.guid);
+        item = player->GetItemByGuid(pagedData.item.guid);
         if (!IsValidItemForUpgrade(item, player))
             return false;
 
@@ -737,13 +790,13 @@ bool ItemUpgrade::_AddPagedData(Player* player, const PagedData& pagedData, uint
     }
 
     if (pagedData.type == PAGED_DATA_TYPE_REQS)
-        AddGossipItemFor(player, GOSSIP_ICON_TRAINER, (MeetsRequirement(player, pagedData.upgradeStat) ? "|cff056e3a[PURCHASE]|r" : "|cffb50505[PURCHASE]|r"), GOSSIP_SENDER_MAIN + 1, GOSSIP_ACTION_INFO_DEF + 1, "Are you sure you want to upgrade?", 0, false);
+        AddGossipItemFor(player, GOSSIP_ICON_TRAINER, (MeetsRequirement(player, pagedData.upgradeStat, item) ? "|cff056e3a[PURCHASE]|r" : "|cffb50505[PURCHASE]|r"), GOSSIP_SENDER_MAIN + 1, GOSSIP_ACTION_INFO_DEF + 1, "Are you sure you want to upgrade?", 0, false);
 
     if (!upgrades.empty())
     {
         AddGossipItemFor(player, GOSSIP_ICON_CHAT, "[ALL REQUIREMENTS]", GOSSIP_SENDER_MAIN + 1, GOSSIP_ACTION_INFO_DEF + 1);
-        StatRequirementContainer reqs = BuildBulkRequirements(upgrades);
-        AddGossipItemFor(player, GOSSIP_ICON_TRAINER, (MeetsRequirement(player, reqs) ? "|cff056e3a[PURCHASE ALL]|r" : "|cffb50505[PURCHASE ALL]|r"), GOSSIP_SENDER_MAIN + 1, GOSSIP_ACTION_INFO_DEF + 2, "Are you sure you want to upgrade?", 0, false);
+        StatRequirementContainer reqs = BuildBulkRequirements(upgrades, item);
+        AddGossipItemFor(player, GOSSIP_ICON_TRAINER, (MeetsRequirement(player, &reqs) ? "|cff056e3a[PURCHASE ALL]|r" : "|cffb50505[PURCHASE ALL]|r"), GOSSIP_SENDER_MAIN + 1, GOSSIP_ACTION_INFO_DEF + 2, "Are you sure you want to upgrade?", 0, false);
     }
 
     if (page + 1 < pagedData.totalPages)
@@ -852,7 +905,7 @@ bool ItemUpgrade::TakePagedDataAction(Player* player, Creature* creature, uint32
                         return AddPagedData(player, creature, pagedData.currentPage);
                     }
 
-                    BuildStatsRequirementsCatalogue(player, upgradeStat);
+                    BuildStatsRequirementsCatalogue(player, upgradeStat, item);
                     return AddPagedData(player, creature, 0);
                 }
             }
@@ -867,7 +920,7 @@ bool ItemUpgrade::TakePagedDataAction(Player* player, Creature* creature, uint32
                 SendMessage(player, "Item is no longer available for upgrade.");
             else
             {
-                BuildStatsRequirementsCatalogue(player, pagedData.upgradeStat);
+                BuildStatsRequirementsCatalogue(player, pagedData.upgradeStat, item);
                 return AddPagedData(player, creature, pagedData.currentPage);
             }
         }
@@ -1041,7 +1094,7 @@ bool ItemUpgrade::PurchaseUpgrade(Player* player)
     if (!item)
         return false;
 
-    if (!MeetsRequirement(player, pagedData.upgradeStat))
+    if (!MeetsRequirement(player, pagedData.upgradeStat, item))
     {
         SendMessage(player, "You do not meet the requirements to buy this upgrade.");
         return true;
@@ -1055,7 +1108,7 @@ bool ItemUpgrade::PurchaseUpgrade(Player* player)
     if (item->IsEquipped())
         player->_ApplyItemMods(item, item->GetSlot(), true);
 
-    TakeRequirements(player, pagedData.upgradeStat);
+    TakeRequirements(player, pagedData.upgradeStat, item);
 
     VisualFeedback(player);
     SendMessage(player, "Item successfully upgraded!");
@@ -1076,8 +1129,8 @@ bool ItemUpgrade::PurchaseUpgradeBulk(Player* player)
     if (upgrades.empty())
         return false;
 
-    StatRequirementContainer reqs = BuildBulkRequirements(upgrades);
-    if (!MeetsRequirement(player, reqs))
+    StatRequirementContainer reqs = BuildBulkRequirements(upgrades, item);
+    if (!MeetsRequirement(player, &reqs))
     {
         SendMessage(player, "You do not meet the requirements to buy these upgrades.");
         return true;
@@ -1092,7 +1145,7 @@ bool ItemUpgrade::PurchaseUpgradeBulk(Player* player)
     if (item->IsEquipped())
         player->_ApplyItemMods(item, item->GetSlot(), true);
 
-    TakeRequirements(player, reqs);
+    TakeRequirements(player, &reqs);
 
     VisualFeedback(player);
     SendMessage(player, "Item successfully upgraded!");
@@ -1154,9 +1207,9 @@ void ItemUpgrade::HandleCharacterRemove(uint32 guid)
     characterUpgradeData[guid].clear();
 }
 
-void ItemUpgrade::BuildRequirementsPage(const Player* player, PagedData& pagedData, const StatRequirementContainer& reqs) const
+void ItemUpgrade::BuildRequirementsPage(const Player* player, PagedData& pagedData, const StatRequirementContainer* reqs) const
 {
-    if (reqs.empty())
+    if (EmptyRequirements(reqs))
     {
         Identifier* identifier = new Identifier();
         identifier->id = 0;
@@ -1166,8 +1219,11 @@ void ItemUpgrade::BuildRequirementsPage(const Player* player, PagedData& pagedDa
     }
     else
     {
-        for (const auto& req : reqs)
+        for (const auto& req : *reqs)
         {
+            if (req.reqType == REQ_TYPE_NONE)
+                continue;
+
             std::ostringstream oss;
             switch (req.reqType)
             {
@@ -1226,14 +1282,14 @@ void ItemUpgrade::BuildRequirementsPage(const Player* player, PagedData& pagedDa
     }
 }
 
-void ItemUpgrade::BuildStatsRequirementsCatalogue(const Player* player, const UpgradeStat* upgradeStat)
+void ItemUpgrade::BuildStatsRequirementsCatalogue(const Player* player, const UpgradeStat* upgradeStat, const Item* item)
 {
     PagedData& pagedData = GetPagedData(player);
     pagedData.Reset();
     pagedData.upgradeStat = upgradeStat;
     pagedData.type = PAGED_DATA_TYPE_REQS;
 
-    BuildRequirementsPage(player, pagedData, upgradeStat->statReq);
+    BuildRequirementsPage(player, pagedData, GetStatRequirements(upgradeStat, item));
 
     pagedData.SortAndCalculateTotals();
 }
@@ -1348,39 +1404,41 @@ bool ItemUpgrade::MeetsRequirement(const Player* player, const UpgradeStatReq& r
             return player->GetArenaPoints() >= (uint32)req.reqVal1;
         case REQ_TYPE_ITEM:
             return player->HasItemCount((uint32)req.reqVal1, (uint32)req.reqVal2, true);
+        case REQ_TYPE_NONE:
+            return true;
     }
 
     return false;
 }
 
-bool ItemUpgrade::MeetsRequirement(const Player* player, const UpgradeStat* upgradeStat) const
+bool ItemUpgrade::MeetsRequirement(const Player* player, const UpgradeStat* upgradeStat, const Item* item) const
 {
-    return MeetsRequirement(player, upgradeStat->statReq);
+    return MeetsRequirement(player, GetStatRequirements(upgradeStat, item));
 }
 
-bool ItemUpgrade::MeetsRequirement(const Player* player, const StatRequirementContainer& reqs) const
+bool ItemUpgrade::MeetsRequirement(const Player* player, const StatRequirementContainer* reqs) const
 {
-    if (reqs.empty())
+    if (EmptyRequirements(reqs))
         return true;
 
-    for (const auto& req : reqs)
+    for (const auto& req : *reqs)
         if (!MeetsRequirement(player, req))
             return false;
 
     return true;
 }
 
-void ItemUpgrade::TakeRequirements(Player* player, const UpgradeStat* upgradeStat)
+void ItemUpgrade::TakeRequirements(Player* player, const UpgradeStat* upgradeStat, const Item* item)
 {
-    TakeRequirements(player, upgradeStat->statReq);
+    TakeRequirements(player, GetStatRequirements(upgradeStat, item));
 }
 
-void ItemUpgrade::TakeRequirements(Player* player, const StatRequirementContainer& reqs)
+void ItemUpgrade::TakeRequirements(Player* player, const StatRequirementContainer* reqs)
 {
-    if (reqs.empty())
+    if (EmptyRequirements(reqs))
         return;
 
-    for (const auto& req : reqs)
+    for (const auto& req : *reqs)
     {
         switch (req.reqType)
         {
@@ -1598,13 +1656,13 @@ void ItemUpgrade::BuildStatsRequirementsCatalogueBulk(const Player* player, cons
     pagedData.upgradeStat = nullptr;
     pagedData.type = PAGED_DATA_TYPE_REQS_BULK;
 
-    StatRequirementContainer reqs = BuildBulkRequirements(FindAllUpgradeableRanks(player, item, pct));
-    BuildRequirementsPage(player, pagedData, reqs);
+    StatRequirementContainer reqs = BuildBulkRequirements(FindAllUpgradeableRanks(player, item, pct), item);
+    BuildRequirementsPage(player, pagedData, &reqs);
 
     pagedData.SortAndCalculateTotals();
 }
 
-ItemUpgrade::StatRequirementContainer ItemUpgrade::BuildBulkRequirements(const std::unordered_map<uint32, const UpgradeStat*>& upgrades) const
+ItemUpgrade::StatRequirementContainer ItemUpgrade::BuildBulkRequirements(const std::unordered_map<uint32, const UpgradeStat*>& upgrades, const Item* item) const
 {
     StatRequirementContainer reqs;
     if (upgrades.empty())
@@ -1616,11 +1674,11 @@ ItemUpgrade::StatRequirementContainer ItemUpgrade::BuildBulkRequirements(const s
     std::unordered_map<uint32, uint32> itemMap;
     for (const auto& upair : upgrades)
     {
-        const StatRequirementContainer& ureq = upair.second->statReq;
-        if (ureq.empty())
+        const StatRequirementContainer* ureq = GetStatRequirements(upair.second, item);
+        if (EmptyRequirements(ureq))
             continue;
 
-        for (const UpgradeStatReq& statReq : ureq)
+        for (const UpgradeStatReq& statReq : *ureq)
         {
             switch (statReq.reqType)
             {
@@ -2501,4 +2559,30 @@ bool ItemUpgrade::CheckDataValidity() const
     }
 
     return ok;
+}
+
+const ItemUpgrade::StatRequirementContainer* ItemUpgrade::GetStatRequirements(const UpgradeStat* upgrade, const Item* item) const
+{
+    if (overrideStatRequirements.find(item->GetEntry()) != overrideStatRequirements.end())
+    {
+        const std::unordered_map<uint32, StatRequirementContainer>& itemReqs = overrideStatRequirements.at(item->GetEntry());
+        if (itemReqs.find(upgrade->statId) != itemReqs.end())
+            return &itemReqs.at(upgrade->statId);
+    }
+
+    if (baseStatRequirements.find(upgrade->statId) != baseStatRequirements.end())
+        return &baseStatRequirements.at(upgrade->statId);
+
+    return nullptr;
+}
+
+bool ItemUpgrade::EmptyRequirements(const StatRequirementContainer* reqs) const
+{
+    if (reqs == nullptr)
+        return true;
+
+    if (reqs->size() == 1 && reqs->at(0).reqType == REQ_TYPE_NONE)
+        return true;
+
+    return false;
 }
