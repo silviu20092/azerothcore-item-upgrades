@@ -2578,7 +2578,7 @@ const ItemUpgrade::StatRequirementContainer* ItemUpgrade::GetStatRequirements(co
 
 bool ItemUpgrade::EmptyRequirements(const StatRequirementContainer* reqs) const
 {
-    if (reqs == nullptr)
+    if (reqs == nullptr || reqs->size() == 0)
         return true;
 
     if (reqs->size() == 1 && reqs->at(0).reqType == REQ_TYPE_NONE)
