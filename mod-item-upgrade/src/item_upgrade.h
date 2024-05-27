@@ -335,6 +335,7 @@ private:
     bool IsValidStatType(uint32 statType) const;
     const StatRequirementContainer* GetStatRequirements(const UpgradeStat* upgrade, const Item* item) const;
     bool EmptyRequirements(const StatRequirementContainer* reqs) const;
+    void EquipItem(Player* player, Item* item);
 };
 
 #define sItemUpgrade ItemUpgrade::instance()

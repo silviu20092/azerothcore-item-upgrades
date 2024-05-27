@@ -730,6 +730,9 @@ bool ItemUpgrade::_AddPagedData(Player* player, const PagedData& pagedData, uint
             oss << " |cff056e3a" << itemLevel.second << "|r]";
 
             AddGossipItemFor(player, GOSSIP_ICON_CHAT, oss.str(), GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page);
+
+            if (!item->IsEquipped())
+                AddGossipItemFor(player, GOSSIP_ICON_BATTLE, "[EQUIP ITEM]", GOSSIP_SENDER_MAIN + 1, GOSSIP_ACTION_INFO_DEF + 1);
         }
         else if (pagedData.type == PAGED_DATA_TYPE_STAT_UPGRADE_BULK)
         {
@@ -953,6 +956,9 @@ bool ItemUpgrade::TakePagedDataAction(Player* player, Creature* creature, uint32
             SendMessage(player, "Item is no longer available.");
         else
         {
+            if (action == 1)
+                EquipItem(player, item);
+
             BuildItemUpgradeStatsCatalogue(player, item);
             return AddPagedData(player, creature, pagedData.currentPage);
         }
@@ -2585,4 +2591,20 @@ bool ItemUpgrade::EmptyRequirements(const StatRequirementContainer* reqs) const
         return true;
 
     return false;
+}
+
+void ItemUpgrade::EquipItem(Player* player, Item* item)
+{
+    if (!item || item->IsEquipped())
+        return;
+
+    uint16 pos;
+    InventoryResult res = player->CanEquipItem(NULL_SLOT, pos, item, true);
+    if (res != EQUIP_ERR_OK)
+    {
+        player->SendEquipError(res, item, nullptr);
+        return;
+    }
+
+    player->SwapItem(item->GetPos(), pos);
 }
