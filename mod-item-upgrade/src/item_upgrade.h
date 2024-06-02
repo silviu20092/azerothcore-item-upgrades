@@ -238,6 +238,16 @@ public:
     void SetRandomUpgradeMaxRank(int32 value);
     uint32 GetRandomUpgradeMaxRank() const;
     bool ChooseRandomUpgrade(Player* player, Item* item);
+    void SetRandomUpgradesWhenBuying(bool value);
+    bool GetRandomUpgradesWhenBuying() const;
+    void SetRandomUpgradesWhenLooting(bool value);
+    bool GetRandomUpgradesWhenLooting() const;
+    void SetRandomUpgradesWhenWinning(bool value);
+    bool GetRandomUpgradesWhenWinning() const;
+    void SetRandomUpgradesOnQuestReward(bool value);
+    bool GetRandomUpgradesOnQuestReward() const;
+    void SetRandomUpgradesWhenCrafting(bool value);
+    bool GetRandomUpgradesWhenCrafting() const;
 public:
     static std::string ItemIcon(const ItemTemplate* proto, uint32 width, uint32 height, int x, int y);
     static std::string ItemIcon(const ItemTemplate* proto);
@@ -274,6 +284,11 @@ private:
     float randomUpgradeChance;
     uint32 randomUpgradeMaxStats;
     uint32 randomUpgradeMaxRank;
+    bool randomUpgradesWhenBuying;
+    bool randomUpgradesWhenLooting;
+    bool randomUpgradesWhenWinning;
+    bool randomUpgradesOnQuestReward;
+    bool randomUpgradesWhenCrafting;
 
     static bool CompareIdentifier(const Identifier* a, const Identifier* b);
     static int32 CalculateModPct(int32 value, const UpgradeStat* upgradeStat);

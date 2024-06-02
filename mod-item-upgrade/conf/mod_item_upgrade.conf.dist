@@ -118,3 +118,43 @@ ItemUpgrade.RandomUpgradeMaxStatCount = 2
 #
 
 ItemUpgrade.RandomUpgradeMaxRank = 3
+
+#
+#    ItemUpgrade.RandomUpgradeWhenBuying
+#        Description: Whether items that are bought from vendors can be randomly upgraded
+#        Default:     0 - don't randomly upgrade bought items
+#
+
+ItemUpgrade.RandomUpgradeWhenBuying = 0
+
+#
+#    ItemUpgrade.RandomUpgradeWhenLooting
+#        Description: Whether items that are looted can be randomly upgraded
+#        Default:     1 - randomly upgrade looted items
+#
+
+ItemUpgrade.RandomUpgradeWhenLooting = 1
+
+#
+#    ItemUpgrade.RandomUpgradeWhenWinning
+#        Description: Whether items that are won by Need/Greel rolls in raid/party can be randomly upgraded
+#        Default:     1 - randomly upgrade won items
+#
+
+ItemUpgrade.RandomUpgradeWhenWinning = 1
+
+#
+#    ItemUpgrade.RandomUpgradeOnQuestReward
+#        Description: Whether quest rewarded items can be randomly upgraded
+#        Default:     1 - randomly upgrade quest rewarded items
+#
+
+ItemUpgrade.RandomUpgradeOnQuestReward = 1
+
+#
+#    ItemUpgrade.RandomUpgradeWhenCrafting
+#        Description: Whether crafted items can be randomly upgraded
+#        Default:     1 - randomly upgrade crafted items
+#
+
+ItemUpgrade.RandomUpgradeWhenCrafting = 1

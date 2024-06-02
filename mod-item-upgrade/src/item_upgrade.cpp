@@ -28,6 +28,11 @@ ItemUpgrade::ItemUpgrade()
     randomUpgradeChance = 2.0f;
     randomUpgradeMaxStats = 2;
     randomUpgradeMaxRank = 3;
+    randomUpgradesWhenBuying = false;
+    randomUpgradesWhenLooting = true;
+    randomUpgradesWhenWinning = true;
+    randomUpgradesOnQuestReward = true;
+    randomUpgradesWhenCrafting = true;
 }
 
 ItemUpgrade::~ItemUpgrade()
@@ -2385,6 +2390,56 @@ void ItemUpgrade::SetRandomUpgradeMaxRank(int32 value)
 uint32 ItemUpgrade::GetRandomUpgradeMaxRank() const
 {
     return randomUpgradeMaxRank;
+}
+
+void ItemUpgrade::SetRandomUpgradesWhenBuying(bool value)
+{
+    randomUpgradesWhenBuying = value;
+}
+
+bool ItemUpgrade::GetRandomUpgradesWhenBuying() const
+{
+    return randomUpgradesWhenBuying;
+}
+
+void ItemUpgrade::SetRandomUpgradesWhenLooting(bool value)
+{
+    randomUpgradesWhenLooting = value;
+}
+
+bool ItemUpgrade::GetRandomUpgradesWhenLooting() const
+{
+    return randomUpgradesWhenLooting;
+}
+
+void ItemUpgrade::SetRandomUpgradesWhenWinning(bool value)
+{
+    randomUpgradesWhenWinning = value;
+}
+
+bool ItemUpgrade::GetRandomUpgradesWhenWinning() const
+{
+    return randomUpgradesWhenWinning;
+}
+
+void ItemUpgrade::SetRandomUpgradesOnQuestReward(bool value)
+{
+    randomUpgradesOnQuestReward = value;
+}
+
+bool ItemUpgrade::GetRandomUpgradesOnQuestReward() const
+{
+    return randomUpgradesOnQuestReward;
+}
+
+void ItemUpgrade::SetRandomUpgradesWhenCrafting(bool value)
+{
+    randomUpgradesWhenCrafting = value;
+}
+
+bool ItemUpgrade::GetRandomUpgradesWhenCrafting() const
+{
+    return randomUpgradesWhenCrafting;
 }
 
 bool ItemUpgrade::ChooseRandomUpgrade(Player* player, Item* item)

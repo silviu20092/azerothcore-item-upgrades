@@ -35,6 +35,11 @@ public:
         sItemUpgrade->SetRandomUpgradeChance(sConfigMgr->GetOption<float>("ItemUpgrade.RandomUpgradeChance", 2.0f));
         sItemUpgrade->SetRandomUpgradeMaxStats(sConfigMgr->GetOption<int32>("ItemUpgrade.RandomUpgradeMaxStatCount", 2));
         sItemUpgrade->SetRandomUpgradeMaxRank(sConfigMgr->GetOption<int32>("ItemUpgrade.RandomUpgradeMaxRank", 3));
+        sItemUpgrade->SetRandomUpgradesWhenBuying(sConfigMgr->GetOption<bool>("ItemUpgrade.RandomUpgradeWhenBuying", false));
+        sItemUpgrade->SetRandomUpgradesWhenLooting(sConfigMgr->GetOption<bool>("ItemUpgrade.RandomUpgradeWhenLooting", true));
+        sItemUpgrade->SetRandomUpgradesWhenWinning(sConfigMgr->GetOption<bool>("ItemUpgrade.RandomUpgradeWhenWinning", true));
+        sItemUpgrade->SetRandomUpgradesOnQuestReward(sConfigMgr->GetOption<bool>("ItemUpgrade.RandomUpgradeOnQuestReward", true));
+        sItemUpgrade->SetRandomUpgradesWhenCrafting(sConfigMgr->GetOption<bool>("ItemUpgrade.RandomUpgradeWhenCrafting", true));
 
         if (reload)
             sItemUpgrade->HandleDataReload(true);

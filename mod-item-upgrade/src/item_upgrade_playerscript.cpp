@@ -39,7 +39,8 @@ public:
             PLAYERHOOK_ON_LOOT_ITEM,
             PLAYERHOOK_ON_GROUP_ROLL_REWARD_ITEM,
             PLAYERHOOK_ON_QUEST_REWARD_ITEM,
-            PLAYERHOOK_ON_CREATE_ITEM
+            PLAYERHOOK_ON_CREATE_ITEM,
+            PLAYERHOOK_ON_AFTER_STORE_OR_EQUIP_NEW_ITEM
         }) {}
 
     void OnApplyItemModsBefore(Player* player, uint8 slot, bool /*apply*/, uint8 /*itemProtoStatNumber*/, uint32 statType, int32& val) override
@@ -77,22 +78,32 @@ public:
 
     void OnLootItem(Player* player, Item* item, uint32 /*count*/, ObjectGuid /*lootguid*/) override
     {
-        sItemUpgrade->ChooseRandomUpgrade(player, item);
+        if (sItemUpgrade->GetRandomUpgradesWhenLooting())
+            sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
 
     void OnGroupRollRewardItem(Player* player, Item* item, uint32 /*count*/, RollVote /*voteType*/, Roll* /*roll*/) override
     {
-        sItemUpgrade->ChooseRandomUpgrade(player, item);
+        if (sItemUpgrade->GetRandomUpgradesWhenWinning())
+            sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
 
     void OnQuestRewardItem(Player* player, Item* item, uint32 /*count*/) override
     {
-        sItemUpgrade->ChooseRandomUpgrade(player, item);
+        if (sItemUpgrade->GetRandomUpgradesOnQuestReward())
+            sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
 
     void OnCreateItem(Player* player, Item* item, uint32 /*count*/) override
     {
-        sItemUpgrade->ChooseRandomUpgrade(player, item);
+        if (sItemUpgrade->GetRandomUpgradesWhenCrafting())
+            sItemUpgrade->ChooseRandomUpgrade(player, item);
+    }
+
+    void OnAfterStoreOrEquipNewItem(Player* player, uint32 /*vendorslot*/, Item* item, uint8 /*count*/, uint8 /*bag*/, uint8 /*slot*/, ItemTemplate const* /*pProto*/, Creature* /*pVendor*/, VendorItem const* /*crItem*/, bool /*bStore*/) override
+    {
+        if (sItemUpgrade->GetRandomUpgradesWhenBuying())
+            sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
 };
 
