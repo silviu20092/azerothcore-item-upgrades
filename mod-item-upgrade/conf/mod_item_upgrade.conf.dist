@@ -72,6 +72,16 @@ ItemUpgrade.UpgradePurgeToken = 0
 ItemUpgrade.UpgradePurgeTokenCount = 0
 
 #
+#    ItemUpgrade.RefundAllOnPurge
+#        Description: Refund all items/gold/honor/arena when purging that were used to upgrade the item. EVERYTHING is refunded, meaning if the item
+#                     has rank 3 stamina for example, it will refund everything from rank 1 to 3. Only active when
+#                     ItemUpgrade.AllowUpgradesPurge = 1
+#        Default:     1 - Refund everything that was used to upgrade the item
+#
+
+ItemUpgrade.RefundAllOnPurge = 1
+
+#
 #    ItemUpgrade.RandomUpgradesOnLoot
 #        Description: Whether looted items (including from party loot, quest items) can be automatically upgraded. Titanforging-like system.
 #        Default:     0 - No

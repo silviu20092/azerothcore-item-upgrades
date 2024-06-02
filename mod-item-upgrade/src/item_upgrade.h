@@ -220,10 +220,11 @@ public:
     void UpdateVisualCache(Player* player);
     void VisualFeedback(Player* player);
 
-    void LoadPurgeConfig(bool allow, int32 token, int32 count);
+    void LoadPurgeConfig(bool allow, int32 token, int32 count, bool refundAllOnPurge);
     bool GetAllowPurgeUpgrades() const;
     uint32 GetPurgeToken() const;
     uint32 GetPurgeTokenCount() const;
+    bool GetRefundAllOnPurge() const;
 
     bool PurgeUpgrade(Player* player, Item* item);
 
@@ -278,6 +279,7 @@ private:
     bool allowPurgeUpgrades;
     uint32 purgeToken;
     uint32 purgeTokenCount;
+    bool refundAllOnPurge;
 
     bool randomUpgrades;
     std::string randomUpgradesLoginMsg;
@@ -351,6 +353,8 @@ private:
     const StatRequirementContainer* GetStatRequirements(const UpgradeStat* upgrade, const Item* item) const;
     bool EmptyRequirements(const StatRequirementContainer* reqs) const;
     void EquipItem(Player* player, Item* item);
+    bool RefundEverything(Player* player, Item* item, const std::vector<const ItemUpgrade::UpgradeStat*>& upgrades);
+    bool TryAddItem(Player* player, uint32 entry, uint32 count, bool add);
 };
 
 #define sItemUpgrade ItemUpgrade::instance()

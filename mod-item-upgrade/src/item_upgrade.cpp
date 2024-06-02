@@ -23,6 +23,7 @@ ItemUpgrade::ItemUpgrade()
     allowPurgeUpgrades = false;
     purgeToken = 0;
     purgeTokenCount = 0;
+    refundAllOnPurge = true;
     randomUpgrades = false;
     randomUpgradesLoginMsg = "";
     randomUpgradeChance = 2.0f;
@@ -785,6 +786,8 @@ bool ItemUpgrade::_AddPagedData(Player* player, const PagedData& pagedData, uint
             oss << " " << purgeTokenCount << "x";
             AddGossipItemFor(player, GOSSIP_ICON_VENDOR, oss.str(), GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page);
         }
+        if (GetRefundAllOnPurge())
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "|cff056e3aWILL REFUND EVERYTHING ON PURGE|r", GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page);
         AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Choose an upgraded item to purge:", GOSSIP_SENDER_MAIN + 2, GOSSIP_ACTION_INFO_DEF + page);
     }
 
@@ -2261,7 +2264,7 @@ std::pair<uint32, uint32> ItemUpgrade::CalculateItemLevel(const Player* player, 
     return std::make_pair(proto->ItemLevel, (upgradedSum * proto->ItemLevel) / originalSum);
 }
 
-void ItemUpgrade::LoadPurgeConfig(bool allow, int32 token, int32 count)
+void ItemUpgrade::LoadPurgeConfig(bool allow, int32 token, int32 count, bool refundAll)
 {
     allowPurgeUpgrades = allow;
 
@@ -2274,6 +2277,8 @@ void ItemUpgrade::LoadPurgeConfig(bool allow, int32 token, int32 count)
         purgeTokenCount = (uint32)count;
     else
         purgeTokenCount = 1;
+
+    refundAllOnPurge = refundAll;
 }
 
 bool ItemUpgrade::GetAllowPurgeUpgrades() const
@@ -2291,27 +2296,46 @@ uint32 ItemUpgrade::GetPurgeTokenCount() const
     return purgeTokenCount;
 }
 
+bool ItemUpgrade::GetRefundAllOnPurge() const
+{
+    return refundAllOnPurge;
+}
+
+bool ItemUpgrade::TryAddItem(Player* player, uint32 entry, uint32 count, bool add)
+{
+    const ItemTemplate* proto = sObjectMgr->GetItemTemplate(entry);
+    if (proto != nullptr)
+    {
+        ItemPosCountVec dest;
+        InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, entry, count);
+        if (msg != EQUIP_ERR_OK)
+        {
+            std::ostringstream oss;
+            oss << "Trying to add " << count << "x " << ItemLink(player, proto, 0);
+            oss << " failed, check your inventory space and retry.";
+            SendMessage(player, oss.str());
+            return false;
+        }
+
+        if (add)
+        {
+            Item* tokenItem = player->StoreNewItem(dest, entry, true);
+            player->SendNewItem(tokenItem, count, true, false);
+        }
+    }
+    return true;
+}
+
 bool ItemUpgrade::PurgeUpgrade(Player* player, Item* item)
 {
-    if (!FindUpgradesForItem(player, item).empty())
+    std::vector<const ItemUpgrade::UpgradeStat*> upgrades = FindUpgradesForItem(player, item);
+    if (!upgrades.empty())
     {
-        const ItemTemplate* proto = sObjectMgr->GetItemTemplate(purgeToken);
-        if (proto != nullptr)
-        {
-            ItemPosCountVec dest;
-            InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, purgeToken, purgeTokenCount);
-            if (msg != EQUIP_ERR_OK)
-            {
-                std::ostringstream oss;
-                oss << "Trying to add " << purgeTokenCount << "x " << ItemLink(player, proto, 0);
-                oss << " failed, check your inventory space and retry.";
-                SendMessage(player, oss.str());
-                return false;
-            }
+        if (!TryAddItem(player, purgeToken, purgeTokenCount, true))
+            return false;
 
-            Item* tokenItem = player->StoreNewItem(dest, purgeToken, true);
-            player->SendNewItem(tokenItem, purgeTokenCount, true, false);
-        }
+        if (!RefundEverything(player, item, upgrades))
+            return false;
 
         if (item->IsEquipped())
             player->_ApplyItemMods(item, item->GetSlot(), false);
@@ -2327,6 +2351,64 @@ bool ItemUpgrade::PurgeUpgrade(Player* player, Item* item)
     }
     else
         return false;
+}
+
+bool ItemUpgrade::RefundEverything(Player* player, Item* item, const std::vector<const UpgradeStat*>& upgrades)
+{
+    if (!GetRefundAllOnPurge())
+        return true;
+
+    uint32 index = 0;
+    std::unordered_map<uint32, const UpgradeStat*> bulkUpgrades;
+    for (const UpgradeStat* stat : upgrades)
+    {
+        uint16 rank = stat->statRank;
+        while (rank >= 1)
+        {
+            bulkUpgrades[index++] = FindUpgradeStat(stat->statType, rank);
+            rank--;
+        }
+    }
+
+    StatRequirementContainer reqs = BuildBulkRequirements(bulkUpgrades, item);
+    for (const UpgradeStatReq& r : reqs)
+    {
+        switch (r.reqType)
+        {
+            case REQ_TYPE_COPPER:
+                if (player->GetMoney() + (uint32)r.reqVal1 > MAX_MONEY_AMOUNT)
+                {
+                    SendMessage(player, "Can't refund copper, would be at gold limit.");
+                    return false;
+                }
+                break;
+            case REQ_TYPE_ITEM:
+                if (!TryAddItem(player, (uint32)r.reqVal1, (uint32)r.reqVal2, false))
+                    return false;
+                break;
+        }
+    }
+
+    for (const UpgradeStatReq& r : reqs)
+    {
+        switch (r.reqType)
+        {
+            case REQ_TYPE_COPPER:
+                player->ModifyMoney((int32)r.reqVal1);
+                break;
+            case REQ_TYPE_HONOR:
+                player->ModifyHonorPoints((int32)r.reqVal1);
+                break;
+            case REQ_TYPE_ARENA:
+                player->ModifyArenaPoints((int32)r.reqVal1);
+                break;
+            case REQ_TYPE_ITEM:
+                TryAddItem(player, (uint32)r.reqVal1, (uint32)r.reqVal2, true);
+                break;
+        }
+    }
+
+    return true;
 }
 
 void ItemUpgrade::SetRandomUpgrades(bool value)
