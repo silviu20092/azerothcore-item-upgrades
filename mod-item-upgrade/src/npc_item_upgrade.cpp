@@ -44,13 +44,13 @@ public:
 
         sItemUpgrade->GetPagedData(player).reloaded = false;
 
-        if (!sItemUpgrade->GetEnabled())
+        if (!sItemUpgrade->GetBoolConfig(CONFIG_ITEM_UPGRADE_ENABLED))
             AddGossipItemFor(player, GOSSIP_ICON_CHAT, "|cffb50505NOT AVAILABLE|r", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF);
         else
         {
             AddGossipItemFor(player, GOSSIP_ICON_MONEY_BAG, "Choose an item to upgrade (by stat, one-by-one)", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2);
             AddGossipItemFor(player, GOSSIP_ICON_MONEY_BAG, "Choose an item to upgrade (all stats at once)", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 7);
-            if (sItemUpgrade->GetAllowPurgeUpgrades())
+            if (sItemUpgrade->GetBoolConfig(CONFIG_ITEM_UPGRADE_ALLOW_PURGE))
                 AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, "Purge upgrades", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 6);
             AddGossipItemFor(player, GOSSIP_ICON_INTERACT_1, "See upgraded items", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 3);
             AddGossipItemFor(player, GOSSIP_ICON_BATTLE, "Update visual cache", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 4);

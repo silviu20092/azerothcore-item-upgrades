@@ -68,9 +68,9 @@ public:
     {
         new SendUpgradePackets(player);
 
-        if (sItemUpgrade->GetEnabled() && sItemUpgrade->GetRandomUpgrades())
+        if (sItemUpgrade->GetBoolConfig(CONFIG_ITEM_UPGRADE_ENABLED) && sItemUpgrade->GetBoolConfig(CONFIG_ITEM_UPGRADE_RANDOM_UPGRADES))
         {
-            const std::string& loginMsg = sItemUpgrade->GetRandomUpgradesLoginMsg();
+            const std::string& loginMsg = sItemUpgrade->GetStringConfig(CONFIG_ITEM_UPGRADE_RANDOM_UPGRADES_LOGIN_MSG);
             if (!loginMsg.empty())
                 ItemUpgrade::SendMessage(player, loginMsg);
         }
@@ -78,31 +78,31 @@ public:
 
     void OnLootItem(Player* player, Item* item, uint32 /*count*/, ObjectGuid /*lootguid*/) override
     {
-        if (sItemUpgrade->GetRandomUpgradesWhenLooting())
+        if (sItemUpgrade->GetBoolConfig(CONFIG_ITEM_UPGRADE_RANDOM_UPGRADES_LOOT))
             sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
 
     void OnGroupRollRewardItem(Player* player, Item* item, uint32 /*count*/, RollVote /*voteType*/, Roll* /*roll*/) override
     {
-        if (sItemUpgrade->GetRandomUpgradesWhenWinning())
+        if (sItemUpgrade->GetBoolConfig(CONFIG_ITEM_UPGRADE_RANDOM_UPGRADES_WIN))
             sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
 
     void OnQuestRewardItem(Player* player, Item* item, uint32 /*count*/) override
     {
-        if (sItemUpgrade->GetRandomUpgradesOnQuestReward())
+        if (sItemUpgrade->GetBoolConfig(CONFIG_ITEM_UPGRADE_RANDOM_UPGRADES_QUEST_REWARD))
             sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
 
     void OnCreateItem(Player* player, Item* item, uint32 /*count*/) override
     {
-        if (sItemUpgrade->GetRandomUpgradesWhenCrafting())
+        if (sItemUpgrade->GetBoolConfig(CONFIG_ITEM_UPGRADE_RANDOM_UPGRADES_CRAFTING))
             sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
 
     void OnAfterStoreOrEquipNewItem(Player* player, uint32 /*vendorslot*/, Item* item, uint8 /*count*/, uint8 /*bag*/, uint8 /*slot*/, ItemTemplate const* /*pProto*/, Creature* /*pVendor*/, VendorItem const* /*crItem*/, bool /*bStore*/) override
     {
-        if (sItemUpgrade->GetRandomUpgradesWhenBuying())
+        if (sItemUpgrade->GetBoolConfig(CONFIG_ITEM_UPGRADE_RANDOM_UPGRADES_BUY))
             sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
 };

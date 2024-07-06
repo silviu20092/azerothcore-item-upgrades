@@ -7,6 +7,7 @@
 
 #include <vector>
 #include "Define.h"
+#include "item_upgrade_config.h"
 
 class ItemUpgrade
 {
@@ -169,8 +170,6 @@ public:
     typedef std::set<uint32> ItemEntryContainer;
     typedef std::unordered_map<uint32, std::set<uint32>> StatWithItemContainer;
 public:
-    static constexpr const char* DefaultAllowedStats = "0,3,4,5,6,7,32,36,45";
-
     static ItemUpgrade* instance();
 
     template <class Container, typename T>
@@ -180,12 +179,12 @@ public:
         return citr != c.end() ? (T*)(&*citr) : nullptr;
     }
 
-    void SetEnabled(bool value);
-    bool GetEnabled() const;
+    bool GetBoolConfig(ItemUpgradeBoolConfigs index) const;
+    std::string GetStringConfig(ItemUpgradeStringConfigs index) const;
+    float GetFloatConfig(ItemUpgradeFloatConfigs index) const;
+    int32 GetIntConfig(ItemUpgradeIntConfigs index) const;
 
-    bool IsAllowedStatType(uint32 statType) const;
-    void LoadAllowedStats(const std::string& stats);
-
+    void LoadConfig();
     void LoadFromDB(bool reload = false);
 
     void BuildUpgradableItemCatalogue(const Player* player, PagedDataType type);
@@ -212,43 +211,14 @@ public:
     void SetReloading(bool value);
     bool GetReloading() const;
 
-    void SetSendItemPackets(bool value);
-    bool GetSendItemPackets() const;
-
     void HandleDataReload(bool apply);
 
     void UpdateVisualCache(Player* player);
     void VisualFeedback(Player* player);
 
-    void LoadPurgeConfig(bool allow, int32 token, int32 count, bool refundAllOnPurge);
-    bool GetAllowPurgeUpgrades() const;
-    uint32 GetPurgeToken() const;
-    uint32 GetPurgeTokenCount() const;
-    bool GetRefundAllOnPurge() const;
-
     bool PurgeUpgrade(Player* player, Item* item);
 
-    void SetRandomUpgrades(bool value);
-    bool GetRandomUpgrades() const;
-    void SetRandomUpgradesLoginMsg(const std::string& value);
-    std::string GetRandomUpgradesLoginMsg() const;
-    void SetRandomUpgradeChance(float value);
-    float GetRandomUpgradeChance() const;
-    void SetRandomUpgradeMaxStats(int32 value);
-    uint32 GetRandomUpgradeMaxStats() const;
-    void SetRandomUpgradeMaxRank(int32 value);
-    uint32 GetRandomUpgradeMaxRank() const;
     bool ChooseRandomUpgrade(Player* player, Item* item);
-    void SetRandomUpgradesWhenBuying(bool value);
-    bool GetRandomUpgradesWhenBuying() const;
-    void SetRandomUpgradesWhenLooting(bool value);
-    bool GetRandomUpgradesWhenLooting() const;
-    void SetRandomUpgradesWhenWinning(bool value);
-    bool GetRandomUpgradesWhenWinning() const;
-    void SetRandomUpgradesOnQuestReward(bool value);
-    bool GetRandomUpgradesOnQuestReward() const;
-    void SetRandomUpgradesWhenCrafting(bool value);
-    bool GetRandomUpgradesWhenCrafting() const;
 public:
     static std::string ItemIcon(const ItemTemplate* proto, uint32 width, uint32 height, int x, int y);
     static std::string ItemIcon(const ItemTemplate* proto);
@@ -259,9 +229,9 @@ public:
 private:
     static constexpr int VISUAL_FEEDBACK_SPELL_ID = 46331;
 
-    bool enabled;
+    ItemUpgradeConfig cfg;
+
     bool reloading;
-    bool sendItemPackets;
     std::vector<uint32> allowedStats;
     UpgradeStatContainer upgradeStatList;
     PagedDataMap playerPagedData;
@@ -275,22 +245,6 @@ private:
 
     std::unordered_map<uint32, StatRequirementContainer> baseStatRequirements;
     std::unordered_map<uint32, std::unordered_map<uint32, StatRequirementContainer>> overrideStatRequirements;
-
-    bool allowPurgeUpgrades;
-    uint32 purgeToken;
-    uint32 purgeTokenCount;
-    bool refundAllOnPurge;
-
-    bool randomUpgrades;
-    std::string randomUpgradesLoginMsg;
-    float randomUpgradeChance;
-    uint32 randomUpgradeMaxStats;
-    uint32 randomUpgradeMaxRank;
-    bool randomUpgradesWhenBuying;
-    bool randomUpgradesWhenLooting;
-    bool randomUpgradesWhenWinning;
-    bool randomUpgradesOnQuestReward;
-    bool randomUpgradesWhenCrafting;
 
     static bool CompareIdentifier(const Identifier* a, const Identifier* b);
     static int32 CalculateModPct(int32 value, const UpgradeStat* upgradeStat);
@@ -355,6 +309,8 @@ private:
     void EquipItem(Player* player, Item* item);
     bool RefundEverything(Player* player, Item* item, const std::vector<const ItemUpgrade::UpgradeStat*>& upgrades);
     bool TryAddItem(Player* player, uint32 entry, uint32 count, bool add);
+    bool IsAllowedStatType(uint32 statType) const;
+    void LoadAllowedStats(const std::string& stats);
 };
 
 #define sItemUpgrade ItemUpgrade::instance()

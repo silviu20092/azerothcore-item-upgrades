@@ -26,23 +26,7 @@ public:
             sItemUpgrade->HandleDataReload(false);
         }
 
-        sItemUpgrade->SetEnabled(sConfigMgr->GetOption<bool>("ItemUpgrade.Enable", true));
-        sItemUpgrade->LoadAllowedStats(sConfigMgr->GetOption<std::string>("ItemUpgrade.AllowedStats", ItemUpgrade::DefaultAllowedStats));
-        sItemUpgrade->SetSendItemPackets(sConfigMgr->GetOption<bool>("ItemUpgrade.SendUpgradedItemsPackets", false));
-        sItemUpgrade->LoadPurgeConfig(sConfigMgr->GetOption<bool>("ItemUpgrade.AllowUpgradesPurge", false),
-            sConfigMgr->GetOption<int32>("ItemUpgrade.UpgradePurgeToken", 0),
-            sConfigMgr->GetOption<uint32>("ItemUpgrade.UpgradePurgeTokenCount", 1),
-            sConfigMgr->GetOption<bool>("ItemUpgrade.RefundAllOnPurge", true));
-        sItemUpgrade->SetRandomUpgrades(sConfigMgr->GetOption<bool>("ItemUpgrade.RandomUpgradesOnLoot", false));
-        sItemUpgrade->SetRandomUpgradesLoginMsg(sConfigMgr->GetOption<std::string>("ItemUpgrade.RandomUpgradesBroadcastLoginMsg", ""));
-        sItemUpgrade->SetRandomUpgradeChance(sConfigMgr->GetOption<float>("ItemUpgrade.RandomUpgradeChance", 2.0f));
-        sItemUpgrade->SetRandomUpgradeMaxStats(sConfigMgr->GetOption<int32>("ItemUpgrade.RandomUpgradeMaxStatCount", 2));
-        sItemUpgrade->SetRandomUpgradeMaxRank(sConfigMgr->GetOption<int32>("ItemUpgrade.RandomUpgradeMaxRank", 3));
-        sItemUpgrade->SetRandomUpgradesWhenBuying(sConfigMgr->GetOption<bool>("ItemUpgrade.RandomUpgradeWhenBuying", false));
-        sItemUpgrade->SetRandomUpgradesWhenLooting(sConfigMgr->GetOption<bool>("ItemUpgrade.RandomUpgradeWhenLooting", true));
-        sItemUpgrade->SetRandomUpgradesWhenWinning(sConfigMgr->GetOption<bool>("ItemUpgrade.RandomUpgradeWhenWinning", true));
-        sItemUpgrade->SetRandomUpgradesOnQuestReward(sConfigMgr->GetOption<bool>("ItemUpgrade.RandomUpgradeOnQuestReward", true));
-        sItemUpgrade->SetRandomUpgradesWhenCrafting(sConfigMgr->GetOption<bool>("ItemUpgrade.RandomUpgradeWhenCrafting", true));
+        sItemUpgrade->LoadConfig();
 
         if (reload)
             sItemUpgrade->HandleDataReload(true);
