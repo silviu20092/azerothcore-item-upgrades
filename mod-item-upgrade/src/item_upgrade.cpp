@@ -13,6 +13,7 @@
 #include "Player.h"
 #include "ScriptedGossip.h"
 #include "Chat.h"
+#include "SpellMgr.h"
 #include "item_upgrade.h"
 
 ItemUpgrade::ItemUpgrade()
