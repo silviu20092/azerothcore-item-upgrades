@@ -168,3 +168,55 @@ ItemUpgrade.RandomUpgradeOnQuestReward = 1
 #
 
 ItemUpgrade.RandomUpgradeWhenCrafting = 1
+
+#
+#    ItemUpgrade.UpgradeWeaponDamage
+#        Description: Shows a menu where weapon physical damage can be upgraded (min/max damage of a weapon)
+#        Default:     1 - show the menu
+#
+
+ItemUpgrade.UpgradeWeaponDamage = 1
+
+#
+#    ItemUpgrade.UpgradeWeaponDamagePercents
+#        Description: A list of percentages (separated by comma) that the players can select when upgrading their weapons.
+#                     Numbers here will be sorted ascending and they will act like ranks, players will have to purchase
+#                     the previous rank (percentage) in order to buy the next one.
+#                     For example: 5,10,15 - lets say that a player wants to upgrade the damage of a weapon by 10%; the player
+#                                  can't directly upgrade by 10%, the player will need to buy the 5% damage increase first.
+#                     When a percentage is chosen for upgrade, weapon's physical min/max damage will be increased by this percent.
+#        Default:     5,10,15 - can choose to upgrade by 5%, 10% and 15% respectively
+#        Only takes effect when ItemUpgrade.UpgradeWeaponDamage is 1
+#
+
+ItemUpgrade.UpgradeWeaponDamagePercents = 5,10,15
+
+#
+#    ItemUpgrade.UpgradeWeaponDamageToken
+#        Description: A token (item) that is to be used when players want to upgrade the damage of a weapon.
+#        Default:     0 - No token
+#                     Item Entry - the entry of token
+#        Only takes effect when ItemUpgrade.UpgradeWeaponDamage is 1
+#
+
+ItemUpgrade.UpgradeWeaponDamageToken = 0
+
+#
+#    ItemUpgrade.UpgradeWeaponDamageTokenCount
+#        Description: The number of ItemUpgrade.UpgradeWeaponDamageToken required to purchase a weapon damage rank.
+#        Default:     1 - 1x ItemUpgrade.UpgradeWeaponDamageToken
+#        Only takes effect when ItemUpgrade.UpgradeWeaponDamage is 1
+#        Only takes effect when ItemUpgrade.UpgradeWeaponDamageToken is a valid item
+#
+
+ItemUpgrade.UpgradeWeaponDamageTokenCount = 1
+
+#
+#    ItemUpgrade.UpgradeWeaponDamageMoney
+#        Description: Money (copper) required for players to pay when buying a weapon damage upgrade.
+#        Default:     0 - No money
+#        Only takes effect when ItemUpgrade.UpgradeWeaponDamage is 1
+#
+
+ItemUpgrade.UpgradeWeaponDamageMoney = 0
+

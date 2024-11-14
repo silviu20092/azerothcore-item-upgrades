@@ -22,7 +22,7 @@ Adds the possibility to individually upgrade items. **EVERY** stat can be upgrad
 5. You should have mod_item_upgrade.conf.dist copied in configs/modules after building, copy this to your server's binaries folder.
 6. Start the server, .sql files should automatically be imported in DB, if not, apply them manually.
 
-WARNING: this mod requires at least this version of AzerothCore https://github.com/azerothcore/azerothcore-wotlk/commit/3988e9581d736f8c7891baaf13011e9df4f46fa4
+WARNING: this mod requires at least this version of AzerothCore https://github.com/azerothcore/azerothcore-wotlk/commit/87fbdb7967094f19a00a3e5623115588c689cae6
 
 ## How to use
 
@@ -89,6 +89,10 @@ Everything is reloadable, meaning you can **add** stats and rank(s), **modify** 
 
 There is a configuration option that allows players to restore items to their original stats (remove upgrades). You can also configure a **token** (and it's quantity) to be given to the player when purging an upgrade. You **can't** purge individual stats or ranks, there is no point, you can only remove **ALL** upgrades from an item at once.
 
+## Weapon damage upgrades
+
+This module adds the possibility to upgrade weapon damage (physical damage, dps - min/max damage). The system is toggleable via the configuration.
+
 ## Some photos
 
 ![pic1](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic1.jpg?raw=true)
@@ -102,6 +106,8 @@ There is a configuration option that allows players to restore items to their or
 ![pic8](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic8.jpg?raw=true)
 ![pic9](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic9.jpg?raw=true)
 ![pic10](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic10.jpg?raw=true)
+![pic11](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic11.jpg?raw=true)
+![pic12](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic12.jpg?raw=true)
 
 ## Credits
 - silviu20092

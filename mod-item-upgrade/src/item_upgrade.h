@@ -6,7 +6,7 @@
 #define _ITEM_UPGRADE_H_
 
 #include <vector>
-#include "Define.h"
+#include "GossipDef.h"
 #include "item_upgrade_config.h"
 
 class ItemUpgrade
@@ -27,6 +27,11 @@ public:
         PAGED_DATA_TYPE_STATS_BULK,
         PAGED_DATA_TYPE_STAT_UPGRADE_BULK,
         PAGED_DATA_TYPE_REQS_BULK,
+        PAGED_DATA_TYPE_WEAPON_UPGRADE_ITEMS,
+        PAGED_DATA_TYPE_WEAPON_UPGRADE_PERCS,
+        PAGED_DATA_TYPE_WEAPON_UPGRADE_PERC_INFO,
+        PAGED_DATA_TYPE_WEAPON_UPGRADE_ITEMS_CHECK,
+        PAGED_DATA_TYPE_WEAPON_UPGRADE_ITEMS_CHECK_INFO,
         MAX_PAGED_DATA_TYPE
     };
 
@@ -34,7 +39,7 @@ public:
     {
         BASE_IDENTIFIER,
         ITEM_IDENTIFIER,
-        UPGRADE_BULK_IDENTIFIER
+        FLOAT_IDENTIFIER
     };
 
     struct Identifier
@@ -42,6 +47,9 @@ public:
         uint32 id;
         std::string name;
         std::string uiName;
+        GossipOptionIcon optionIcon;
+
+        Identifier() : id(0), optionIcon(GOSSIP_ICON_INTERACT_1) {}
 
         virtual IdentifierType GetType() const
         {
@@ -59,13 +67,13 @@ public:
         }
     };
 
-    struct UpgradeBulkIdentifier : public Identifier
+    struct FloatIdentifier : public Identifier
     {
         float modPct;
 
         IdentifierType GetType() const override
         {
-            return UPGRADE_BULK_IDENTIFIER;
+            return FLOAT_IDENTIFIER;
         }
     };
 
@@ -164,6 +172,7 @@ public:
         uint32 guid;
         ObjectGuid itemGuid;
         const UpgradeStat* upgradeStat;
+        float upgradeStatModPct;
     };
     typedef std::unordered_map<uint32, std::vector<CharacterUpgrade>> CharacterUpgradeContainer;
 
@@ -184,7 +193,7 @@ public:
     float GetFloatConfig(ItemUpgradeFloatConfigs index) const;
     int32 GetIntConfig(ItemUpgradeIntConfigs index) const;
 
-    void LoadConfig();
+    void LoadConfig(bool reload);
     void LoadFromDB(bool reload = false);
 
     void BuildUpgradableItemCatalogue(const Player* player, PagedDataType type);
@@ -195,6 +204,9 @@ public:
     void BuildStatsRequirementsCatalogue(const Player* player, const UpgradeStat* upgradeStat, const Item* item);
     void BuildAlreadyUpgradedItemsCatalogue(const Player* player, PagedDataType type);
     void BuildItemUpgradeStatsCatalogue(const Player* player, const Item* item);
+    void BuildWeaponPercentUpgradesCatalogue(const Player* player, const Item* item);
+    void BuildWeaponUpgradesPercentInfoCatalogue(const Player* player, const Item* item, float pct);
+    void BuildWeaponUpgradeInfoCatalogue(const Player* player, const Item* item);
 
     PagedData& GetPagedData(const Player* player);
     PagedDataMap& GetPagedDataMap();
@@ -202,9 +214,12 @@ public:
     bool TakePagedDataAction(Player* player, Creature* creature, uint32 action);
 
     bool IsValidItemForUpgrade(const Item* item, const Player* player) const;
+    bool IsValidWeaponForUpgrade(const Item* item, const Player* player) const;
 
     int32 HandleStatModifier(const Player* player, uint8 slot, uint32 statType, int32 amount) const;
     int32 HandleStatModifier(const Player* player, Item* item, uint32 statType, int32 amount, EnchantmentSlot slot) const;
+    std::pair<float, float> HandleWeaponModifier(const Player* player, uint8 slot, float minDamage, float maxDamage) const;
+    std::pair<float, float> HandleWeaponModifier(const Player* player, const Item* item, float minDamage, float maxDamag) const;
     void HandleItemRemove(Player* player, Item* item);
     void HandleCharacterRemove(uint32 guid);
 
@@ -216,9 +231,9 @@ public:
     void UpdateVisualCache(Player* player);
     void VisualFeedback(Player* player);
 
-    bool PurgeUpgrade(Player* player, Item* item);
-
     bool ChooseRandomUpgrade(Player* player, Item* item);
+
+    void BuildWeaponUpgradeReqs();
 public:
     static std::string ItemIcon(const ItemTemplate* proto, uint32 width, uint32 height, int x, int y);
     static std::string ItemIcon(const ItemTemplate* proto);
@@ -246,16 +261,23 @@ private:
     std::unordered_map<uint32, StatRequirementContainer> baseStatRequirements;
     std::unordered_map<uint32, std::unordered_map<uint32, StatRequirementContainer>> overrideStatRequirements;
 
+    UpgradeStatContainer weaponUpgradeStats;
+    CharacterUpgradeContainer characterWeaponUpgradeData;
+    StatRequirementContainer weaponUpgradeReqs;
+
     static bool CompareIdentifier(const Identifier* a, const Identifier* b);
     static int32 CalculateModPct(int32 value, const UpgradeStat* upgradeStat);
+    static float CalculateModPctF(float value, const UpgradeStat* upgradeStat);
     static std::string CopperToMoneyStr(uint32 money, bool colored);
     static std::string FormatFloat(float val, uint32 decimals = 2);
+    static std::string FormatIncrease(float prev, float next);
 
     void CleanupDB(bool reload);
     void LoadStatRequirements();
     void LoadStatRequirementsOverrides();
     void LoadUpgradeStats();
     void LoadCharacterUpgradeData();
+    void LoadCharacterWeaponUpgradeData();
     void LoadAllowedItems();
     void LoadAllowedStatsItems();
     void LoadBlacklistedItems();
@@ -269,17 +291,34 @@ private:
     const _ItemStat* GetStatByType(const std::vector<_ItemStat>& statInfo, uint32 statType) const;
     std::string StatTypeToString(uint32 statType) const;
     std::string ItemLinkForUI(const Item* item, const Player* player) const;
-    void MergeStatRequirements(std::unordered_map<uint32, StatRequirementContainer>& statRequirementMap);
+    void MergeStatRequirements(std::unordered_map<uint32, StatRequirementContainer>& statRequirementMap, bool validate = true);
+
+    template <typename Func>
+    const UpgradeStat* _FindUpgradeStat(const UpgradeStatContainer& upgradeStatContainer, Func f) const
+    {
+        UpgradeStatContainer::const_iterator citer = std::find_if(upgradeStatContainer.begin(), upgradeStatContainer.end(), f);
+        if (citer != upgradeStatContainer.end())
+            return &*citer;
+        return nullptr;
+    }
+
     const UpgradeStat* FindUpgradeStat(uint32 statId) const;
     const UpgradeStat* FindUpgradeStat(uint32 statType, uint16 rank) const;
+    const UpgradeStat* FindWeaponUpgradeStat(float pct) const;
+    const UpgradeStat* FindNearestWeaponUpgradeStat(float pct) const;
+    const UpgradeStat* FindNextWeaponUpgradeStat(float pct) const;
+    std::vector<const UpgradeStat*> _FindUpgradesForItem(const CharacterUpgradeContainer& characterUpgradeDataContainer, const Player* player, const Item* item) const;
     std::vector<const UpgradeStat*> FindUpgradesForItem(const Player* player, const Item* item) const;
     const UpgradeStat* FindUpgradeForItem(const Player* player, const Item* item, uint32 statType) const;
+    const UpgradeStat* FindUpgradeForWeapon(const Player* player, const Item* item) const;
     bool MeetsRequirement(const Player* player, const UpgradeStatReq& req) const;
     bool MeetsRequirement(const Player* player, const UpgradeStat* upgradeStat, const Item* item) const;
     bool MeetsRequirement(const Player* player, const StatRequirementContainer* reqs) const;
     void TakeRequirements(Player* player, const UpgradeStat* upgradeStat, const Item* item);
     void TakeRequirements(Player* player, const StatRequirementContainer* reqs);
+    void TakeWeaponUpgradeRequirements(Player* player);
     bool PurchaseUpgrade(Player* player);
+    bool PurchaseWeaponUpgrade(Player* player);
     void AddUpgradedItemToPagedData(const Item* item, const Player* player, PagedData& pagedData, const std::string &from);
     void HandleDataReload(Player* player, bool apply);
     std::vector<Item*> GetPlayerItems(const Player* player, bool inBankAlso) const;
@@ -288,7 +327,9 @@ private:
     void SendItemPacket(Player* player, Item* item) const;
     std::pair<uint32, uint32> CalculateItemLevel(const Player* player, Item* item, const UpgradeStat* upgrade = nullptr) const;
     std::pair<uint32, uint32> CalculateItemLevel(const Player* player, Item* item, std::unordered_map<uint32, const UpgradeStat*>) const;
+    void RemoveItemUpgradeFromContainer(CharacterUpgradeContainer& upgradesContainer, Player* player, Item* item);
     void RemoveItemUpgrade(Player* player, Item* item);
+    void RemoveWeaponUpgrade(Player* player, Item* item);
     bool AddUpgradeForNewItem(Player* player, Item* item, const UpgradeStat* upgrade, const _ItemStat* stat);
     void AddItemUpgradeToDB(const Player* player, const Item* item, const UpgradeStat* upgrade) const;
     const UpgradeStat* FindNearestUpgradeStat(uint32 statType, uint16 rank, const Item* item) const;
@@ -302,15 +343,25 @@ private:
     void BuildRequirementsPage(const Player* player, PagedData& pagedData, const StatRequirementContainer* reqs) const;
     bool PurchaseUpgradeBulk(Player* player);
     bool HandlePurchaseRank(Player* player, Item* item, const UpgradeStat* upgrade);
+    bool HandlePurchaseWeaponUpgrade(Player* player, Item* item, const UpgradeStat* upgrade);
     bool CheckDataValidity() const;
     bool IsValidStatType(uint32 statType) const;
     const StatRequirementContainer* GetStatRequirements(const UpgradeStat* upgrade, const Item* item) const;
     bool EmptyRequirements(const StatRequirementContainer* reqs) const;
     void EquipItem(Player* player, Item* item);
+    bool TryRefundRequirements(Player* player, const StatRequirementContainer& reqs);
     bool RefundEverything(Player* player, Item* item, const std::vector<const ItemUpgrade::UpgradeStat*>& upgrades);
     bool TryAddItem(Player* player, uint32 entry, uint32 count, bool add);
     bool IsAllowedStatType(uint32 statType) const;
     void LoadAllowedStats(const std::string& stats);
+
+    void LoadWeaponUpgradePercents(const std::string& percents);
+    std::pair<float, float> GetItemProtoDamage(const ItemTemplate* proto) const;
+    std::pair<float, float> GetItemProtoDamage(const Item* item) const;
+    bool MeetsWeaponUpgradeRequirement(const Player* player) const;
+
+    bool PurgeUpgrade(Player* player, Item* item);
+    bool PurgeWeaponUpgrade(Player* player, Item* item);
 };
 
 #define sItemUpgrade ItemUpgrade::instance()

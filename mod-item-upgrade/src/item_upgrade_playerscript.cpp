@@ -40,7 +40,8 @@ public:
             PLAYERHOOK_ON_GROUP_ROLL_REWARD_ITEM,
             PLAYERHOOK_ON_QUEST_REWARD_ITEM,
             PLAYERHOOK_ON_CREATE_ITEM,
-            PLAYERHOOK_ON_AFTER_STORE_OR_EQUIP_NEW_ITEM
+            PLAYERHOOK_ON_AFTER_STORE_OR_EQUIP_NEW_ITEM,
+            PLAYERHOOK_ON_APPLY_WEAPON_DAMAGE
         }) {}
 
     void OnApplyItemModsBefore(Player* player, uint8 slot, bool /*apply*/, uint8 /*itemProtoStatNumber*/, uint32 statType, int32& val) override
@@ -61,6 +62,7 @@ public:
     void OnDeleteFromDB(CharacterDatabaseTransaction trans, uint32 guid) override
     {
         trans->Append("DELETE FROM character_item_upgrade WHERE guid = {}", guid);
+        trans->Append("DELETE FROM character_weapon_upgrade WHERE guid = {}", guid);
         sItemUpgrade->HandleCharacterRemove(guid);
     }
 
@@ -104,6 +106,16 @@ public:
     {
         if (sItemUpgrade->GetBoolConfig(CONFIG_ITEM_UPGRADE_RANDOM_UPGRADES_BUY))
             sItemUpgrade->ChooseRandomUpgrade(player, item);
+    }
+
+    void OnApplyWeaponDamage(Player* player, uint8 slot, ItemTemplate const* /*proto*/, float& minDamage, float& maxDamage, uint8 damageIndex) override
+    {
+        if (damageIndex == 0)
+        {
+            std::pair<float, float> upgradedDmgInfo = sItemUpgrade->HandleWeaponModifier(player, slot, minDamage, maxDamage);
+            minDamage = upgradedDmgInfo.first;
+            maxDamage = upgradedDmgInfo.second;
+        }
     }
 };
 

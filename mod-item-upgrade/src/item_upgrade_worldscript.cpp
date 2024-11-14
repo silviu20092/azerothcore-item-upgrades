@@ -26,7 +26,7 @@ public:
             sItemUpgrade->HandleDataReload(false);
         }
 
-        sItemUpgrade->LoadConfig();
+        sItemUpgrade->LoadConfig(reload);
 
         if (reload)
             sItemUpgrade->HandleDataReload(true);
@@ -35,6 +35,7 @@ public:
     void OnBeforeWorldInitialized() override
     {
         sItemUpgrade->LoadFromDB();
+        sItemUpgrade->BuildWeaponUpgradeReqs();
     }
 };
 
