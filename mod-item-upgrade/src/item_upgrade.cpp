@@ -1517,8 +1517,8 @@ std::pair<float, float> ItemUpgrade::HandleWeaponModifier(const Player* player, 
     if (weaponUpgrade == nullptr)
         return std::make_pair(minDamage, maxDamage);
 
-    float upgradedMinDamage = std::floorf(CalculateModPctF(minDamage, weaponUpgrade));
-    float upgradedMaxDamage = std::ceilf(CalculateModPctF(maxDamage, weaponUpgrade));
+    float upgradedMinDamage = ::floorf(CalculateModPctF(minDamage, weaponUpgrade));
+    float upgradedMaxDamage = ::ceilf(CalculateModPctF(maxDamage, weaponUpgrade));
     return std::make_pair(upgradedMinDamage, upgradedMaxDamage);
 }
 
@@ -1839,8 +1839,8 @@ void ItemUpgrade::BuildWeaponUpgradesPercentInfoCatalogue(const Player* player, 
     std::pair<float, float> upgradedDmgInfo = HandleWeaponModifier(player, item, dmgInfo.first, dmgInfo.second);
     float currentMinDamage = upgradedDmgInfo.first;
     float currentMaxDamage = upgradedDmgInfo.second;
-    float nextMinDamage = std::floorf(CalculateModPctF(dmgInfo.first, pagedData.upgradeStat));
-    float nextMaxDamage = std::ceilf(CalculateModPctF(dmgInfo.second, pagedData.upgradeStat));
+    float nextMinDamage = ::floorf(CalculateModPctF(dmgInfo.first, pagedData.upgradeStat));
+    float nextMaxDamage = ::ceilf(CalculateModPctF(dmgInfo.second, pagedData.upgradeStat));
 
     Identifier* minDmgIdnt = new Identifier();
     minDmgIdnt->id = 0;
