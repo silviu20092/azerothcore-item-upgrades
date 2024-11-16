@@ -4,6 +4,7 @@
 
 #include <numeric>
 #include <iomanip>
+#include <cmath>
 #include "Item.h"
 #include "Config.h"
 #include "Tokenize.h"
