@@ -1517,8 +1517,8 @@ std::pair<float, float> ItemUpgrade::HandleWeaponModifier(const Player* player, 
     if (weaponUpgrade == nullptr)
         return std::make_pair(minDamage, maxDamage);
 
-    float upgradedMinDamage = ::floorf(CalculateModPctF(minDamage, weaponUpgrade));
-    float upgradedMaxDamage = ::ceilf(CalculateModPctF(maxDamage, weaponUpgrade));
+    float upgradedMinDamage = std::floor(CalculateModPctF(minDamage, weaponUpgrade));
+    float upgradedMaxDamage = std::ceil(CalculateModPctF(maxDamage, weaponUpgrade));
     return std::make_pair(upgradedMinDamage, upgradedMaxDamage);
 }
 
@@ -1839,8 +1839,8 @@ void ItemUpgrade::BuildWeaponUpgradesPercentInfoCatalogue(const Player* player, 
     std::pair<float, float> upgradedDmgInfo = HandleWeaponModifier(player, item, dmgInfo.first, dmgInfo.second);
     float currentMinDamage = upgradedDmgInfo.first;
     float currentMaxDamage = upgradedDmgInfo.second;
-    float nextMinDamage = ::floorf(CalculateModPctF(dmgInfo.first, pagedData.upgradeStat));
-    float nextMaxDamage = ::ceilf(CalculateModPctF(dmgInfo.second, pagedData.upgradeStat));
+    float nextMinDamage = std::floor(CalculateModPctF(dmgInfo.first, pagedData.upgradeStat));
+    float nextMaxDamage = std::ceil(CalculateModPctF(dmgInfo.second, pagedData.upgradeStat));
 
     Identifier* minDmgIdnt = new Identifier();
     minDmgIdnt->id = 0;
@@ -2562,14 +2562,15 @@ void ItemUpgrade::HandleDataReload(Player* player, bool apply)
     for (iter; iter != playerItems.end(); ++iter)
     {
         Item* item = *iter;
-        if (apply)
-            SendItemPacket(player, item);
 
         if (!item->IsEquipped())
             continue;
 
         player->_ApplyItemMods(item, item->GetSlot(), apply);
     }
+
+    if (apply)
+        UpdateVisualCache(player);
 }
 
 std::vector<Item*> ItemUpgrade::GetPlayerItems(const Player* player, bool inBankAlso) const
@@ -2782,10 +2783,81 @@ void ItemUpgrade::SendItemPacket(Player* player, Item* item) const
 
 void ItemUpgrade::UpdateVisualCache(Player* player)
 {
+    std::map<uint32, std::vector<ItemUpgradeInfo>> entryUpgradeMap;
     std::vector<Item*> items = GetPlayerItems(player, true);
     std::vector<Item*>::const_iterator citer = items.begin();
     for (citer; citer != items.end(); ++citer)
-        SendItemPacket(player, *citer);
+    {
+        const Item* item = *citer;
+        ItemUpgradeInfo upgradeInfo;
+        upgradeInfo.itemGuid = item->GetGUID();
+        upgradeInfo.upgrades = FindUpgradesForItem(player, item);
+        upgradeInfo.weaponUpgrade = FindUpgradeForWeapon(player, item);
+        entryUpgradeMap[item->GetEntry()].push_back(upgradeInfo);
+    }
+
+    auto chooseVisualItem = [&](const uint32 entry) -> const ItemUpgradeInfo* {
+        auto emptyUpgrade = [](const ItemUpgradeInfo* itemUpgradeInfo)
+        {
+            return itemUpgradeInfo->upgrades.empty() && itemUpgradeInfo->weaponUpgrade == nullptr;
+        };
+
+        const std::vector<ItemUpgradeInfo>& upgradeInfo = entryUpgradeMap.at(entry);
+        const ItemUpgradeInfo* highestStatUpgrade = &upgradeInfo[0];
+        const ItemUpgradeInfo* highestWeaponUpgrade = &upgradeInfo[0];
+        for (size_t i = 1; i < upgradeInfo.size(); i++)
+        {
+            const ItemUpgradeInfo &itemUpgradeInfo = upgradeInfo[i];
+            if (itemUpgradeInfo.upgrades.size() > highestStatUpgrade->upgrades.size())
+                highestStatUpgrade = &itemUpgradeInfo;
+            if (itemUpgradeInfo.weaponUpgrade != nullptr && (highestWeaponUpgrade->weaponUpgrade == nullptr || itemUpgradeInfo.weaponUpgrade->statModPct > highestWeaponUpgrade->weaponUpgrade->statModPct)) {
+                highestWeaponUpgrade = &itemUpgradeInfo;
+            }
+        }
+        if (emptyUpgrade(highestStatUpgrade) && emptyUpgrade(highestWeaponUpgrade))
+            return nullptr;
+
+        if (GetItemVisualsPriority() == PRIORITIZE_STATS)
+        {
+            if (!highestStatUpgrade->upgrades.empty())
+                return highestStatUpgrade;
+            else
+                if (highestWeaponUpgrade->weaponUpgrade != nullptr)
+                    return highestWeaponUpgrade;
+        }
+        else
+        {
+            if (highestWeaponUpgrade->weaponUpgrade != nullptr)
+                return highestWeaponUpgrade;
+            else
+            {
+                if (!highestStatUpgrade->upgrades.empty())
+                    return highestStatUpgrade;
+            }
+        }
+
+        return nullptr;
+    };
+
+    for (const auto& p : entryUpgradeMap)
+    {
+        const ItemUpgradeInfo* itemUpgradeInfo = chooseVisualItem(p.first);
+        if (itemUpgradeInfo != nullptr)
+        {
+            Item* item = player->GetItemByGuid(itemUpgradeInfo->itemGuid);
+            if (item != nullptr)
+                SendItemPacket(player, item);
+        }
+        else
+        {
+            for (const ItemUpgradeInfo& upgrInfo : p.second)
+            {
+                Item* item = player->GetItemByGuid(upgrInfo.itemGuid);
+                if (item != nullptr)
+                    SendItemPacket(player, item);
+            }
+        }
+    }
 }
 
 void ItemUpgrade::VisualFeedback(Player* player)
@@ -3266,5 +3338,19 @@ void ItemUpgrade::BuildWeaponUpgradeReqs()
         moneyReq.reqType = REQ_TYPE_COPPER;
         moneyReq.reqVal1 = (float)GetIntConfig(CONFIG_ITEM_UPGRADE_WEAPON_DAMAGE_MONEY);
         weaponUpgradeReqs.push_back(moneyReq);
+    }
+}
+
+ItemUpgrade::ItemVisualsPriority ItemUpgrade::GetItemVisualsPriority() const
+{
+    int32 priority = cfg.GetIntConfig(CONFIG_ITEM_UPGRADE_SEND_PACKETS_PRIORITY);
+    switch (priority)
+    {
+        case 0:
+            return PRIORITIZE_STATS;
+        case 1:
+            return PRIORITIZE_WEAPON_DAMAGE;
+        default:
+            return PRIORITIZE_STATS;
     }
 }

@@ -42,6 +42,12 @@ public:
         FLOAT_IDENTIFIER
     };
 
+    enum ItemVisualsPriority
+    {
+        PRIORITIZE_STATS,
+        PRIORITIZE_WEAPON_DAMAGE
+    };
+
     struct Identifier
     {
         uint32 id;
@@ -175,6 +181,13 @@ public:
         float upgradeStatModPct;
     };
     typedef std::unordered_map<uint32, std::vector<CharacterUpgrade>> CharacterUpgradeContainer;
+
+    struct ItemUpgradeInfo
+    {
+        ObjectGuid itemGuid;
+        std::vector<const UpgradeStat*> upgrades;
+        const UpgradeStat* weaponUpgrade;
+    };
 
     typedef std::set<uint32> ItemEntryContainer;
     typedef std::unordered_map<uint32, std::set<uint32>> StatWithItemContainer;
@@ -362,6 +375,8 @@ private:
 
     bool PurgeUpgrade(Player* player, Item* item);
     bool PurgeWeaponUpgrade(Player* player, Item* item);
+
+    ItemVisualsPriority GetItemVisualsPriority() const;
 };
 
 #define sItemUpgrade ItemUpgrade::instance()

@@ -34,13 +34,31 @@ ItemUpgrade.AllowedStats = 3,4,5,6,7,32,36,45
 #        Description: Whether to send SMSG_ITEM_QUERY_SINGLE_RESPONSE for upgraded items. This will ensure that owner will see the stats correctly
 #                     when reading item description. ONLY the owner will see the stats though and this DOES NOT work for items that have random
 #                     properties (stats that are random after acquiring the item, such as "of the Bear" or "of Intellect" items). The limitation
-#                     is due to WOTLK client nature and is not possible to be solved.
+#                     is due to WOTLK client nature and is not possible to be solved. Weapon upgrades (min/max damage increased) WILL also be
+#                     visible for items with random properties.
 #                     THIS ONLY AFFECTS VISUALS, UPGRADED STATS WILL BE THERE NONETHELESS!
 #        Default:     0 - Disabled
 #                     1 - Enabled
 #
 
 ItemUpgrade.SendUpgradedItemsPackets = 1
+
+#
+#    ItemUpgrade.SendUpgradedItemsPacketsPrioritization
+#        Description: Since SMSG_ITEM_QUERY_SINGLE_RESPONSE is sent by item ENTRY and not by universal identifier (GUID) it means that if
+#                     multiple items with the same entry have upgrades (whether stat upgrades or weapon upgrades) then the player will see
+#                     the exact same stats and damage for ALL items with the same entry. So there must be some kind of prioritization,
+#                     whether to choose the item with the most stat upgrades or with the highest weapon upgrade percentage.
+#                     Example: if player has two Ramaladni's Blade of Culling and both items were upgraded, one with 5% weapon damage upgrade
+#                              and the other with 10% weapon damage upgrade AND ItemUpgrade.SendUpgradedItemsPacketsPrioritization is 1
+#                              then the player will see both weapons have 10% more damage. Again this is only VISUAL, stats are correctly
+#                              calculated for both!
+#        Values  :    0 - Prioritize upgraded stats (items with higher number of upgraded stats will be prioritized)
+#                     1 - Prioritize weapon upgrade (items with the highest weapon upgrade percentage will be prioritized)
+#        Default :    0
+#
+
+ItemUpgrade.SendUpgradedItemsPacketsPrioritization = 0
 
 #
 #    ItemUpgrade.AllowUpgradesPurge

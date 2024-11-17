@@ -38,6 +38,7 @@ void ItemUpgradeConfig::Initialize()
     else if (floatConfigs[CONFIG_ITEM_UPGRADE_RANDOM_UPGRADES_CHANCE] > 100.0f)
         floatConfigs[CONFIG_ITEM_UPGRADE_RANDOM_UPGRADES_CHANCE] = 100.0f;
 
+    intConfigs[CONFIG_ITEM_UPGRADE_SEND_PACKETS_PRIORITY] = sConfigMgr->GetOption<int32>("ItemUpgrade.SendUpgradedItemsPacketsPrioritization", 0);
     intConfigs[CONFIG_ITEM_UPGRADE_PURGE_TOKEN] = sConfigMgr->GetOption<int32>("ItemUpgrade.UpgradePurgeToken", 0);
     if (intConfigs[CONFIG_ITEM_UPGRADE_PURGE_TOKEN] < 0)
         intConfigs[CONFIG_ITEM_UPGRADE_PURGE_TOKEN] = 0;
