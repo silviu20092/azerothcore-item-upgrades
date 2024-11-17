@@ -1357,6 +1357,7 @@ bool ItemUpgrade::HandlePurchaseWeaponUpgrade(Player* player, Item* item, const 
     newUpgrade.guid = player->GetGUID().GetCounter();
     newUpgrade.itemGuid = item->GetGUID();
     newUpgrade.upgradeStat = upgrade;
+    newUpgrade.upgradeStatModPct = upgrade->statModPct;
     upgrades.push_back(newUpgrade);
 
     return true;
