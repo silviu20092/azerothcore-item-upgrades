@@ -284,6 +284,7 @@ private:
     static std::string CopperToMoneyStr(uint32 money, bool colored);
     static std::string FormatFloat(float val, uint32 decimals = 2);
     static std::string FormatIncrease(float prev, float next);
+    static std::string FormatItemLocation(const Player* player, const Item* item);
 
     void CleanupDB(bool reload);
     void LoadStatRequirements();

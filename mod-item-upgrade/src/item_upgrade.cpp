@@ -719,7 +719,7 @@ void ItemUpgrade::AddItemToPagedData(const Item* item, const Player* player, Pag
     itemIdentifier->id = pagedData.data.size();
     itemIdentifier->guid = item->GetGUID();
     itemIdentifier->name = ItemNameWithLocale(player, proto, item->GetItemRandomPropertyId());
-    itemIdentifier->uiName = ItemLinkForUI(item, player);
+    itemIdentifier->uiName = ItemLinkForUI(item, player) + " - [" + FormatItemLocation(player, item) + "]";
 
     pagedData.data.push_back(itemIdentifier);
 }
@@ -2816,7 +2816,7 @@ void ItemUpgrade::UpdateVisualCache(Player* player)
             }
         }
         if (emptyUpgrade(highestStatUpgrade) && emptyUpgrade(highestWeaponUpgrade))
-            return nullptr;
+            return &upgradeInfo[0];
 
         if (GetItemVisualsPriority() == PRIORITIZE_STATS)
         {
@@ -2837,27 +2837,16 @@ void ItemUpgrade::UpdateVisualCache(Player* player)
             }
         }
 
-        return nullptr;
+        return &upgradeInfo[0];
     };
 
     for (const auto& p : entryUpgradeMap)
     {
         const ItemUpgradeInfo* itemUpgradeInfo = chooseVisualItem(p.first);
-        if (itemUpgradeInfo != nullptr)
-        {
-            Item* item = player->GetItemByGuid(itemUpgradeInfo->itemGuid);
-            if (item != nullptr)
-                SendItemPacket(player, item);
-        }
-        else
-        {
-            for (const ItemUpgradeInfo& upgrInfo : p.second)
-            {
-                Item* item = player->GetItemByGuid(upgrInfo.itemGuid);
-                if (item != nullptr)
-                    SendItemPacket(player, item);
-            }
-        }
+        ASSERT(itemUpgradeInfo != nullptr);
+        Item* item = player->GetItemByGuid(itemUpgradeInfo->itemGuid);
+        if (item != nullptr)
+            SendItemPacket(player, item);
     }
 }
 
@@ -3354,4 +3343,28 @@ ItemUpgrade::ItemVisualsPriority ItemUpgrade::GetItemVisualsPriority() const
         default:
             return PRIORITIZE_STATS;
     }
+}
+
+/*static*/ std::string ItemUpgrade::FormatItemLocation(const Player* player, const Item* item)
+{
+    uint8 bagSlot = item->GetBagSlot();
+    uint8 itemSlot = item->GetSlot();
+    if (bagSlot == INVENTORY_SLOT_BAG_0)
+    {
+        if (itemSlot < EQUIPMENT_SLOT_END)
+            return "equipped";
+        if (itemSlot >= INVENTORY_SLOT_ITEM_START && itemSlot < INVENTORY_SLOT_ITEM_END)
+            return "in backpack - slot " + Acore::ToString(itemSlot - INVENTORY_SLOT_ITEM_START + 1);
+        if (itemSlot >= BANK_SLOT_ITEM_START && itemSlot < BANK_SLOT_ITEM_END)
+            return "in bank - slot " + Acore::ToString(itemSlot - BANK_SLOT_ITEM_START + 1);
+    }
+    else
+    {
+        if (bagSlot >= INVENTORY_SLOT_BAG_START && bagSlot < INVENTORY_SLOT_BAG_END)
+            return "in bag " + Acore::ToString(bagSlot - INVENTORY_SLOT_BAG_START + 1) + " - slot " + Acore::ToString(itemSlot + 1);
+        if (bagSlot >= BANK_SLOT_BAG_START && bagSlot < BANK_SLOT_BAG_END)
+            return "in bank bag " + Acore::ToString(bagSlot - BANK_SLOT_BAG_START + 1) + " - slot " + Acore::ToString(itemSlot + 1);
+    }
+
+    return "unknown";
 }
