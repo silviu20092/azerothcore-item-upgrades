@@ -19,7 +19,7 @@ Adds the possibility to individually upgrade items. **EVERY** stat can be upgrad
 2. Copy mod-item-upgrade to your AzerothCore repo modules folder.
 3. Re-run cmake to generate the solution.
 4. Re-build your project.
-5. You should have mod_item_upgrade.conf.dist copied in configs/modules after building, copy this to your server's binaries folder.
+5. You should have mod_item_upgrade.conf.dist copied in configs/modules after building, copy this to configs/modules in your server's base directory.
 6. Start the server, .sql files should automatically be imported in DB, if not, apply them manually.
 
 WARNING: this mod requires at least this version of AzerothCore https://github.com/azerothcore/azerothcore-wotlk/commit/87fbdb7967094f19a00a3e5623115588c689cae6
