@@ -15,6 +15,7 @@
 #include "ScriptedGossip.h"
 #include "Chat.h"
 #include "SpellMgr.h"
+#include "WorldSessionMgr.h"
 #include "item_upgrade.h"
 
 ItemUpgrade::ItemUpgrade()
@@ -2549,8 +2550,8 @@ bool ItemUpgrade::GetReloading() const
 
 void ItemUpgrade::HandleDataReload(bool apply)
 {
-    const SessionMap& sessions = sWorld->GetAllSessions();
-    SessionMap::const_iterator itr;
+    const WorldSessionMgr::SessionMap& sessions = sWorldSessionMgr->GetAllSessions();
+    WorldSessionMgr::SessionMap::const_iterator itr;
     for (itr = sessions.begin(); itr != sessions.end(); ++itr)
         if (itr->second && itr->second->GetPlayer() && itr->second->GetPlayer()->IsInWorld())
             HandleDataReload(itr->second->GetPlayer(), apply);

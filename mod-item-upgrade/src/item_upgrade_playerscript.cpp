@@ -44,29 +44,29 @@ public:
             PLAYERHOOK_ON_APPLY_WEAPON_DAMAGE
         }) {}
 
-    void OnApplyItemModsBefore(Player* player, uint8 slot, bool /*apply*/, uint8 /*itemProtoStatNumber*/, uint32 statType, int32& val) override
+    void OnPlayerApplyItemModsBefore(Player* player, uint8 slot, bool /*apply*/, uint8 /*itemProtoStatNumber*/, uint32 statType, int32& val) override
     {
         val = sItemUpgrade->HandleStatModifier(player, slot, statType, val);
     }
 
-    void OnApplyEnchantmentItemModsBefore(Player* player, Item* item, EnchantmentSlot slot, bool /*apply*/, uint32 enchant_spell_id, uint32& enchant_amount) override
+    void OnPlayerApplyEnchantmentItemModsBefore(Player* player, Item* item, EnchantmentSlot slot, bool /*apply*/, uint32 enchant_spell_id, uint32& enchant_amount) override
     {
         enchant_amount = sItemUpgrade->HandleStatModifier(player, item, enchant_spell_id, enchant_amount, slot);
     }
 
-    void OnAfterMoveItemFromInventory(Player* player, Item* it, uint8 /*bag*/, uint8 /*slot*/, bool /*update*/) override
+    void OnPlayerAfterMoveItemFromInventory(Player* player, Item* it, uint8 /*bag*/, uint8 /*slot*/, bool /*update*/) override
     {
         sItemUpgrade->HandleItemRemove(player, it);
     }
 
-    void OnDeleteFromDB(CharacterDatabaseTransaction trans, uint32 guid) override
+    void OnPlayerDeleteFromDB(CharacterDatabaseTransaction trans, uint32 guid) override
     {
         trans->Append("DELETE FROM character_item_upgrade WHERE guid = {}", guid);
         trans->Append("DELETE FROM character_weapon_upgrade WHERE guid = {}", guid);
         sItemUpgrade->HandleCharacterRemove(guid);
     }
 
-    void OnLogin(Player* player) override
+    void OnPlayerLogin(Player* player) override
     {
         new SendUpgradePackets(player);
 
@@ -78,37 +78,37 @@ public:
         }
     }
 
-    void OnLootItem(Player* player, Item* item, uint32 /*count*/, ObjectGuid /*lootguid*/) override
+    void OnPlayerLootItem(Player* player, Item* item, uint32 /*count*/, ObjectGuid /*lootguid*/) override
     {
         if (sItemUpgrade->GetBoolConfig(CONFIG_ITEM_UPGRADE_RANDOM_UPGRADES_LOOT))
             sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
 
-    void OnGroupRollRewardItem(Player* player, Item* item, uint32 /*count*/, RollVote /*voteType*/, Roll* /*roll*/) override
+    void OnPlayerGroupRollRewardItem(Player* player, Item* item, uint32 /*count*/, RollVote /*voteType*/, Roll* /*roll*/) override
     {
         if (sItemUpgrade->GetBoolConfig(CONFIG_ITEM_UPGRADE_RANDOM_UPGRADES_WIN))
             sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
 
-    void OnQuestRewardItem(Player* player, Item* item, uint32 /*count*/) override
+    void OnPlayerQuestRewardItem(Player* player, Item* item, uint32 /*count*/) override
     {
         if (sItemUpgrade->GetBoolConfig(CONFIG_ITEM_UPGRADE_RANDOM_UPGRADES_QUEST_REWARD))
             sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
 
-    void OnCreateItem(Player* player, Item* item, uint32 /*count*/) override
+    void OnPlayerCreateItem(Player* player, Item* item, uint32 /*count*/) override
     {
         if (sItemUpgrade->GetBoolConfig(CONFIG_ITEM_UPGRADE_RANDOM_UPGRADES_CRAFTING))
             sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
 
-    void OnAfterStoreOrEquipNewItem(Player* player, uint32 /*vendorslot*/, Item* item, uint8 /*count*/, uint8 /*bag*/, uint8 /*slot*/, ItemTemplate const* /*pProto*/, Creature* /*pVendor*/, VendorItem const* /*crItem*/, bool /*bStore*/) override
+    void OnPlayerAfterStoreOrEquipNewItem(Player* player, uint32 /*vendorslot*/, Item* item, uint8 /*count*/, uint8 /*bag*/, uint8 /*slot*/, ItemTemplate const* /*pProto*/, Creature* /*pVendor*/, VendorItem const* /*crItem*/, bool /*bStore*/) override
     {
         if (sItemUpgrade->GetBoolConfig(CONFIG_ITEM_UPGRADE_RANDOM_UPGRADES_BUY))
             sItemUpgrade->ChooseRandomUpgrade(player, item);
     }
 
-    void OnApplyWeaponDamage(Player* player, uint8 slot, ItemTemplate const* /*proto*/, float& minDamage, float& maxDamage, uint8 damageIndex) override
+    void OnPlayerApplyWeaponDamage(Player* player, uint8 slot, ItemTemplate const* /*proto*/, float& minDamage, float& maxDamage, uint8 damageIndex) override
     {
         if (damageIndex == 0)
         {
