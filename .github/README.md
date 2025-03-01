@@ -15,12 +15,11 @@ Adds the possibility to individually upgrade items. **EVERY** stat can be upgrad
 
 ## How to install
 
-1. Clone this repository somewhere on your device.
-2. Copy mod-item-upgrade to your AzerothCore repo modules folder.
-3. Re-run cmake to generate the solution.
-4. Re-build your project.
-5. You should have mod_item_upgrade.conf.dist copied in configs/modules after building, copy this to configs/modules in your server's base directory.
-6. Start the server, .sql files should automatically be imported in DB, if not, apply them manually.
+1. Clone this repository to your AzerothCore repo modules folder. You should now have mod-item-upgrade there.
+2. Re-run cmake to generate the solution.
+3. Re-build your project.
+4. You should have mod_item_upgrade.conf.dist copied in configs/modules after building, copy this to configs/modules in your server's base directory.
+5. Start the server, .sql files should automatically be imported in DB, if not, apply them manually.
 
 WARNING: this mod requires at least this version of AzerothCore https://github.com/azerothcore/azerothcore-wotlk/commit/87fbdb7967094f19a00a3e5623115588c689cae6
 
@@ -95,19 +94,19 @@ This module adds the possibility to upgrade weapon damage (physical damage, dps 
 
 ## Some photos
 
-![pic1](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic1.jpg?raw=true)
-![pic2](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic2.jpg?raw=true)
-![pic3](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic3.jpg?raw=true)
-![pic4](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic4.jpg?raw=true)
-![pic4_1](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic4_1.jpg?raw=true)
-![pic5](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic5.jpg?raw=true)
-![pic6](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic6.jpg?raw=true)
-![pic7](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic7.jpg?raw=true)
-![pic8](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic8.jpg?raw=true)
-![pic9](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic9.jpg?raw=true)
-![pic10](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic10.jpg?raw=true)
-![pic11](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic11.jpg?raw=true)
-![pic12](https://github.com/silviu20092/azerothcore-item-upgrades/blob/master/pics/pic12.jpg?raw=true)
+![pic1](https://github.com/silviu20092/mod-item-upgrade/blob/master/pics/pic1.jpg?raw=true)
+![pic2](https://github.com/silviu20092/mod-item-upgrade/blob/master/pics/pic2.jpg?raw=true)
+![pic3](https://github.com/silviu20092/mod-item-upgrade/blob/master/pics/pic3.jpg?raw=true)
+![pic4](https://github.com/silviu20092/mod-item-upgrade/blob/master/pics/pic4.jpg?raw=true)
+![pic4_1](https://github.com/silviu20092/mod-item-upgrade/blob/master/pics/pic4_1.jpg?raw=true)
+![pic5](https://github.com/silviu20092/mod-item-upgrade/blob/master/pics/pic5.jpg?raw=true)
+![pic6](https://github.com/silviu20092/mod-item-upgrade/blob/master/pics/pic6.jpg?raw=true)
+![pic7](https://github.com/silviu20092/mod-item-upgrade/blob/master/pics/pic7.jpg?raw=true)
+![pic8](https://github.com/silviu20092/mod-item-upgrade/blob/master/pics/pic8.jpg?raw=true)
+![pic9](https://github.com/silviu20092/mod-item-upgrade/blob/master/pics/pic9.jpg?raw=true)
+![pic10](https://github.com/silviu20092/mod-item-upgrade/blob/master/pics/pic10.jpg?raw=true)
+![pic11](https://github.com/silviu20092/mod-item-upgrade/blob/master/pics/pic11.jpg?raw=true)
+![pic12](https://github.com/silviu20092/mod-item-upgrade/blob/master/pics/pic12.jpg?raw=true)
 
 ## Credits
 - silviu20092
