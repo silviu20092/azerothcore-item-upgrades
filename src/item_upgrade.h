@@ -7,6 +7,7 @@
 
 #include <vector>
 #include "GossipDef.h"
+#include "Player.h"
 #include "item_upgrade_config.h"
 
 class ItemUpgrade
@@ -247,6 +248,25 @@ public:
     bool ChooseRandomUpgrade(Player* player, Item* item);
 
     void BuildWeaponUpgradeReqs();
+
+    static std::string StatTypeToString(uint32 statType);
+    static std::string EquipmentSlotToString(EquipmentSlots slot);
+    static std::vector<_ItemStat> LoadItemStatInfo(const Item* item);
+    static const _ItemStat* GetStatByType(const std::vector<_ItemStat>& statInfo, uint32 statType);
+    static std::pair<float, float> GetItemProtoDamage(const ItemTemplate* proto);
+    static std::pair<float, float> GetItemProtoDamage(const Item* item);
+
+    static std::string FormatFloat(float val, uint32 decimals = 2);
+    static std::string FormatIncrease(float prev, float next);
+
+    static int32 CalculateModPct(int32 value, const UpgradeStat* upgradeStat);
+    static float CalculateModPctF(float value, const UpgradeStat* upgradeStat);
+
+    std::vector<const UpgradeStat*> FindUpgradesForItem(const Player* player, const Item* item) const;
+    const UpgradeStat* FindUpgradeForWeapon(const Player* player, const Item* item) const;
+
+    bool IsInactiveStatUpgrade(const Item* item, const UpgradeStat* upgradeStat) const;
+    bool IsInactiveWeaponUpgrade() const;
 public:
     static std::string ItemIcon(const ItemTemplate* proto, uint32 width, uint32 height, int x, int y);
     static std::string ItemIcon(const ItemTemplate* proto);
@@ -279,11 +299,7 @@ private:
     StatRequirementContainer weaponUpgradeReqs;
 
     static bool CompareIdentifier(const Identifier* a, const Identifier* b);
-    static int32 CalculateModPct(int32 value, const UpgradeStat* upgradeStat);
-    static float CalculateModPctF(float value, const UpgradeStat* upgradeStat);
     static std::string CopperToMoneyStr(uint32 money, bool colored);
-    static std::string FormatFloat(float val, uint32 decimals = 2);
-    static std::string FormatIncrease(float prev, float next);
     static std::string FormatItemLocation(const Player* player, const Item* item);
 
     void CleanupDB(bool reload);
@@ -301,9 +317,6 @@ private:
     void AddItemToPagedData(const Item* item, const Player* player, PagedData& pagedData);
     bool _AddPagedData(Player* player, const PagedData& pagedData, uint32 page) const;
     void NoPagedData(Player* player, const PagedData& pagedData) const;
-    std::vector<_ItemStat> LoadItemStatInfo(const Item* item) const;
-    const _ItemStat* GetStatByType(const std::vector<_ItemStat>& statInfo, uint32 statType) const;
-    std::string StatTypeToString(uint32 statType) const;
     std::string ItemLinkForUI(const Item* item, const Player* player) const;
     void MergeStatRequirements(std::unordered_map<uint32, StatRequirementContainer>& statRequirementMap, bool validate = true);
 
@@ -322,9 +335,7 @@ private:
     const UpgradeStat* FindNearestWeaponUpgradeStat(float pct) const;
     const UpgradeStat* FindNextWeaponUpgradeStat(float pct) const;
     std::vector<const UpgradeStat*> _FindUpgradesForItem(const CharacterUpgradeContainer& characterUpgradeDataContainer, const Player* player, const Item* item) const;
-    std::vector<const UpgradeStat*> FindUpgradesForItem(const Player* player, const Item* item) const;
     const UpgradeStat* FindUpgradeForItem(const Player* player, const Item* item, uint32 statType) const;
-    const UpgradeStat* FindUpgradeForWeapon(const Player* player, const Item* item) const;
     bool MeetsRequirement(const Player* player, const UpgradeStatReq& req) const;
     bool MeetsRequirement(const Player* player, const UpgradeStat* upgradeStat, const Item* item) const;
     bool MeetsRequirement(const Player* player, const StatRequirementContainer* reqs) const;
@@ -370,8 +381,6 @@ private:
     void LoadAllowedStats(const std::string& stats);
 
     void LoadWeaponUpgradePercents(const std::string& percents);
-    std::pair<float, float> GetItemProtoDamage(const ItemTemplate* proto) const;
-    std::pair<float, float> GetItemProtoDamage(const Item* item) const;
     bool MeetsWeaponUpgradeRequirement(const Player* player) const;
 
     bool PurgeUpgrade(Player* player, Item* item);

@@ -11,7 +11,6 @@
 #include "StringConvert.h"
 #include "DatabaseEnv.h"
 #include "Log.h"
-#include "Player.h"
 #include "ScriptedGossip.h"
 #include "Chat.h"
 #include "SpellMgr.h"
@@ -2293,7 +2292,7 @@ std::unordered_map<uint32, const ItemUpgrade::UpgradeStat*> ItemUpgrade::FindAll
     return a->name < b->name;
 }
 
-const _ItemStat* ItemUpgrade::GetStatByType(const std::vector<_ItemStat>& statInfo, uint32 statType) const
+/*static*/ const _ItemStat* ItemUpgrade::GetStatByType(const std::vector<_ItemStat>& statInfo, uint32 statType)
 {
     std::vector<_ItemStat>::const_iterator citer = std::find_if(statInfo.begin(), statInfo.end(), [&](const _ItemStat& stat) { return stat.ItemStatType == statType; });
     if (citer != statInfo.end())
@@ -2301,7 +2300,7 @@ const _ItemStat* ItemUpgrade::GetStatByType(const std::vector<_ItemStat>& statIn
     return nullptr;
 }
 
-std::vector<_ItemStat> ItemUpgrade::LoadItemStatInfo(const Item* item) const
+/*static*/ std::vector<_ItemStat> ItemUpgrade::LoadItemStatInfo(const Item* item)
 {
     std::vector<_ItemStat> statInfo;
     ItemTemplate const* proto = item->GetTemplate();
@@ -2365,9 +2364,10 @@ std::vector<_ItemStat> ItemUpgrade::LoadItemStatInfo(const Item* item) const
     return statInfo;
 }
 
-std::string ItemUpgrade::StatTypeToString(uint32 statType) const
+/*static*/ std::string ItemUpgrade::StatTypeToString(uint32 statType)
 {
-    static std::unordered_map<uint32, std::string> statTypeToStrMap = {
+    static std::unordered_map<uint32, std::string> statTypeToStrMap =
+    {
         {ITEM_MOD_MANA, "Mana"}, {ITEM_MOD_HEALTH, "Health"}, {ITEM_MOD_AGILITY, "Agility"},
         {ITEM_MOD_STRENGTH, "Strength"}, {ITEM_MOD_INTELLECT, "Intellect"}, {ITEM_MOD_SPIRIT, "Spirit"},
         {ITEM_MOD_STAMINA, "Stamina"}, {ITEM_MOD_DEFENSE_SKILL_RATING, "Defense Rating"}, {ITEM_MOD_DODGE_RATING, "Dodge Rating"},
@@ -2386,6 +2386,38 @@ std::string ItemUpgrade::StatTypeToString(uint32 statType) const
 
     if (statTypeToStrMap.find(statType) != statTypeToStrMap.end())
         return statTypeToStrMap.at(statType);
+
+    return "unknown";
+}
+
+/*static*/ std::string ItemUpgrade::EquipmentSlotToString(EquipmentSlots slot)
+{
+    static std::unordered_map<EquipmentSlots, std::string> equipmentSlotToStrMap =
+    {
+        {EQUIPMENT_SLOT_START, "Head"},
+        {EQUIPMENT_SLOT_HEAD, "Head"},
+        {EQUIPMENT_SLOT_NECK, "Neck"},
+        {EQUIPMENT_SLOT_SHOULDERS, "Shoulders"},
+        {EQUIPMENT_SLOT_BODY, "Shirt"},
+        {EQUIPMENT_SLOT_CHEST, "Chest"},
+        {EQUIPMENT_SLOT_WAIST, "Waist"},
+        {EQUIPMENT_SLOT_LEGS, "Legs"},
+        {EQUIPMENT_SLOT_FEET, "Feet"},
+        {EQUIPMENT_SLOT_WRISTS, "Wrist"},
+        {EQUIPMENT_SLOT_HANDS, "Gloves"},
+        {EQUIPMENT_SLOT_FINGER1, "Finger 1"},
+        {EQUIPMENT_SLOT_FINGER2, "Finger 2"},
+        {EQUIPMENT_SLOT_TRINKET1, "Trinket 1"},
+        {EQUIPMENT_SLOT_TRINKET2, "Trinket 2"},
+        {EQUIPMENT_SLOT_BACK, "Back"},
+        {EQUIPMENT_SLOT_MAINHAND, "Main Hand"},
+        {EQUIPMENT_SLOT_OFFHAND, "Offhand"},
+        {EQUIPMENT_SLOT_RANGED, "Ranged"},
+        {EQUIPMENT_SLOT_TABARD, "Tabard"}
+    };
+
+    if (equipmentSlotToStrMap.find(slot) != equipmentSlotToStrMap.end())
+        return equipmentSlotToStrMap.at(slot);
 
     return "unknown";
 }
@@ -3294,12 +3326,12 @@ void ItemUpgrade::LoadWeaponUpgradePercents(const std::string& percents)
     }
 }
 
-std::pair<float, float> ItemUpgrade::GetItemProtoDamage(const ItemTemplate* proto) const
+/*static*/ std::pair<float, float> ItemUpgrade::GetItemProtoDamage(const ItemTemplate* proto)
 {
     return std::make_pair(proto->Damage[0].DamageMin, proto->Damage[0].DamageMax);
 }
 
-std::pair<float, float> ItemUpgrade::GetItemProtoDamage(const Item* item) const
+/*static*/ std::pair<float, float> ItemUpgrade::GetItemProtoDamage(const Item* item)
 {
     return GetItemProtoDamage(item->GetTemplate());
 }
@@ -3368,4 +3400,23 @@ ItemUpgrade::ItemVisualsPriority ItemUpgrade::GetItemVisualsPriority() const
     }
 
     return "unknown";
+}
+
+bool ItemUpgrade::IsInactiveStatUpgrade(const Item* item, const UpgradeStat* upgradeStat) const
+{
+    if (!GetBoolConfig(CONFIG_ITEM_UPGRADE_ENABLED))
+        return true;
+
+    if (!IsAllowedItem(item)
+        || IsBlacklistedItem(item)
+        || !IsAllowedStatType(upgradeStat->statType)
+        || !CanApplyUpgradeForItem(item, upgradeStat))
+        return true;
+
+    return false;
+}
+
+bool ItemUpgrade::IsInactiveWeaponUpgrade() const
+{
+    return !GetBoolConfig(CONFIG_ITEM_UPGRADE_ENABLED) || !GetBoolConfig(CONFIG_ITEM_UPGRADE_WEAPON_DAMAGE);
 }
